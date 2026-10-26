@@ -1,0 +1,16 @@
+# 密钥与本机配置，绝不上传
+config.env
+*.env
+!config.env.example
+
+# 生成物（由定时任务在云端生成）
+site/
+web/data.json
+web/health.json
+web/*.gz
+web/*.tmp
+
+# 本机开发用
+__pycache__/
+_*.py
+*.xlsx

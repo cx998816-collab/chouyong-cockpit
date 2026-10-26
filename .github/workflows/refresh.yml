@@ -1,0 +1,74 @@
+# 定时从飞书知识库读表，生成驾驶舱站点并发布到 Cloudflare Pages（电脑关机也照常运行）
+# 需要在 GitHub 仓库 Settings → Secrets and variables → Actions 里配置：
+#   FEISHU_APP_ID、FEISHU_APP_SECRET、FEISHU_VERIFICATION_TOKEN、WIKI_TOKEN、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID
+name: refresh
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # 每 15 分钟（GitHub 高峰期可能延迟几分钟）
+  workflow_dispatch:          # 也可以在 Actions 页面手动点运行
+  push:
+    branches: [main]
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+env:
+  PROJECT: chouyong-cockpit
+
+permissions:
+  contents: read
+  actions: write   # keepalive 用：公开仓库 60 天无活动会暂停定时任务，它会自动续上
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 防止定时任务因长期无提交被 GitHub 暂停
+        uses: gautamkrishnar/keepalive-workflow@v2
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-cloud.txt
+
+      - run: pip install -r requirements-cloud.txt
+
+      - name: 读表并生成站点
+        run: python build_site.py
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+
+      - name: 首次运行时创建 Pages 项目（已存在则跳过）
+        run: npx --yes wrangler@3 pages project create "$PROJECT" --production-branch=main || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: 同步机器人密钥到 Pages（供 functions/ 回复卡片）
+        run: |
+          printf '%s' "$FEISHU_APP_ID" | npx --yes wrangler@3 pages secret put FEISHU_APP_ID --project-name "$PROJECT"
+          printf '%s' "$FEISHU_APP_SECRET" | npx --yes wrangler@3 pages secret put FEISHU_APP_SECRET --project-name "$PROJECT"
+          printf '%s' "$FEISHU_VERIFICATION_TOKEN" | npx --yes wrangler@3 pages secret put FEISHU_VERIFICATION_TOKEN --project-name "$PROJECT"
+        if: github.event_name != 'schedule'   # 只在推代码 / 手动运行时同步，定时任务不必每次都写
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_VERIFICATION_TOKEN: ${{ secrets.FEISHU_VERIFICATION_TOKEN }}
+
+      - name: 发布到 Cloudflare Pages
+        run: npx --yes wrangler@3 pages deploy site --project-name "$PROJECT" --branch main --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -1,0 +1,1253 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>抽佣签约驾驶舱</title>
+<link rel="preload" href="d3.min.js" as="script">
+<script>
+// 页面一开始解析就并行下载数据，不等 d3 和页面结构
+window.__bxDataP = fetch('data.json', {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+</script>
+<style>
+:root{--color-fg:#1A2433;--color-fg-muted:#5A6575;--color-bg:#F3F4F6;--color-panel:#FFFFFF;--color-border-line:#DCE1E6;--color-ok:#2F7A64;--color-warn:#A8731A;--color-bad:#A6403B;
+--cds-gap-xs:4px;--cds-gap-sm:8px;--cds-gap-md:14px;--cds-gap-lg:20px;--cds-gap-xl:32px;--cds-pad-xs:4px;--cds-pad-sm:8px;--cds-pad-md:14px;--cds-pad-lg:18px;--cds-pad-xl:32px;--cds-radius:8px;
+--cds-font-size-caption:12px;--cds-font-size-body:14px;--cds-font-size-heading:15px;--cds-font-size-title:22px;--cds-font-weight-medium:600;
+--cds-chart-grid:#E6E9ED;--cds-chart-axis:#C7CDD3;--cds-chart-reference:#9AA6B4;--cds-chart-muted:#C3CAD2;--cds-chart-status-critical:#A6403B;
+--cds-surface-popover:#FFFFFF;--cds-border:#DCE1E6;--cds-shadow-popover:0 8px 28px rgba(16,24,40,.16);--cds-text-secondary:#5A6575;--cds-dur-slow:240ms;--cds-ease-out:cubic-bezier(.2,.8,.2,1);
+--font-anthropic-sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;--font-anthropic-serif:"Noto Serif SC","Songti SC","STSong",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--color-fg:#E8ECF1;--color-fg-muted:#9AA6B4;--color-bg:#0B121A;--color-panel:#121B25;--color-border-line:#2A3644;--color-ok:#55B898;--color-warn:#E2AA4F;--color-bad:#E2716A;
+--cds-chart-grid:#1F2A36;--cds-chart-axis:#3A4654;--cds-chart-reference:#5A6575;--cds-chart-muted:#3C4856;--cds-chart-status-critical:#E2716A;--cds-surface-popover:#18222D;--cds-border:#2A3644;--cds-shadow-popover:0 8px 28px rgba(0,0,0,.5);--cds-text-secondary:#9AA6B4;color-scheme:dark}}
+:root[data-theme="dark"]{--color-fg:#E8ECF1;--color-fg-muted:#9AA6B4;--color-bg:#0B121A;--color-panel:#121B25;--color-border-line:#2A3644;--color-ok:#55B898;--color-warn:#E2AA4F;--color-bad:#E2716A;
+--cds-chart-grid:#1F2A36;--cds-chart-axis:#3A4654;--cds-chart-reference:#5A6575;--cds-chart-muted:#3C4856;--cds-chart-status-critical:#E2716A;--cds-surface-popover:#18222D;--cds-border:#2A3644;--cds-shadow-popover:0 8px 28px rgba(0,0,0,.5);--cds-text-secondary:#9AA6B4;color-scheme:dark}
+body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-anthropic-sans)}
+.bx-page{padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bx-filter{top:env(safe-area-inset-top,0px)!important}
+.bx b,.bx strong{font-weight:600}
+.bx-snap{font-size:12px;color:var(--color-fg-muted);text-align:center;margin-top:-6px}
+
+
+/* 布局：深色驾驶舱横幅（全局签约率 + 结论）→ 吸顶筛选栏 → 六格指标 → 2×2 联动图表 → 拜访节奏 → 商家明细 + 档案 → 最新拜访 */
+.bx{
+  --bx-ink:#1A2433;--bx-ink2:#5A6575;--bx-line:#DCE1E6;--bx-soft:#F2F4F6;--bx-primary:#25435F;--bx-gold:#A47E35;
+  --bx-agree:#2F7A64;--bx-pending:#2F6F94;--bx-consider:#C2892B;--bx-refuse:#A6403B;--bx-new:#6F819A;--bx-pool:#C3CAD2;--bx-exit:#9D958A;
+  --bx-hero:#142131;--bx-hero2:#1D2E42;--bx-hero-fg:#F3F1EC;--bx-hero-mute:#A9B4C2;--bx-sel:#FBF4E4;
+  max-width:1360px;margin-inline:auto;font-family:var(--font-anthropic-sans);font-variant-numeric:tabular-nums;color:var(--color-fg);
+  display:flex;flex-direction:column;gap:var(--cds-gap-lg);padding-block:var(--cds-pad-sm) var(--cds-pad-xl)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bx{
+  --bx-ink:#E8ECF1;--bx-ink2:#9AA6B4;--bx-line:#2A3644;--bx-soft:#18222D;--bx-primary:#8DB3DA;--bx-gold:#D6B26A;
+  --bx-agree:#55B898;--bx-pending:#6DB3DB;--bx-consider:#E2AA4F;--bx-refuse:#E2716A;--bx-new:#93A6C1;--bx-pool:#3C4856;--bx-exit:#837C72;
+  --bx-hero:#0E1824;--bx-hero2:#172636;--bx-hero-fg:#F3F1EC;--bx-hero-mute:#97A3B2;--bx-sel:#2C2617}}
+:root[data-theme="dark"] .bx{
+  --bx-ink:#E8ECF1;--bx-ink2:#9AA6B4;--bx-line:#2A3644;--bx-soft:#18222D;--bx-primary:#8DB3DA;--bx-gold:#D6B26A;
+  --bx-agree:#55B898;--bx-pending:#6DB3DB;--bx-consider:#E2AA4F;--bx-refuse:#E2716A;--bx-new:#93A6C1;--bx-pool:#3C4856;--bx-exit:#837C72;
+  --bx-hero:#0E1824;--bx-hero2:#172636;--bx-hero-fg:#F3F1EC;--bx-hero-mute:#97A3B2;--bx-sel:#2C2617}
+
+/* hero */
+.bx-hero{background:linear-gradient(135deg,var(--bx-hero) 0%,var(--bx-hero2) 100%);color:var(--bx-hero-fg);border-radius:calc(var(--cds-radius) * 2);padding:clamp(18px,3vw,32px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--cds-gap-lg);align-items:center}
+@media(max-width:760px){.bx-hero{grid-template-columns:minmax(0,1fr)}}
+.bx-eyebrow{font-size:var(--cds-font-size-caption);letter-spacing:.14em;color:var(--bx-gold)}
+.bx-title{font-family:var(--font-anthropic-serif);font-weight:400;font-size:clamp(26px,3.4vw,38px);line-height:1.15;margin:8px 0 0;text-wrap:balance;color:var(--bx-hero-fg)}
+.bx-take{font-size:var(--cds-font-size-body);line-height:1.85;margin:14px 0 0;max-width:72ch;color:var(--bx-hero-mute)}
+.bx .bx-take b{color:var(--bx-hero-fg);font-weight:600}
+.bx-ring{display:flex;align-items:center;gap:18px}
+.bx-ring-svg{width:132px;min-height:132px;flex:none}
+.bx-ring-t{display:flex;flex-direction:column;gap:4px;font-size:var(--cds-font-size-caption);color:var(--bx-hero-mute);min-width:9rem}
+.bx-ring-t .big{font-family:var(--font-anthropic-serif);font-size:30px;color:var(--bx-hero-fg);line-height:1.1}
+
+/* filter bar */
+.bx-filter{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--color-bg) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--bx-line);border-radius:calc(var(--cds-radius) * 1.5);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.bx-frow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.bx-fl{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);letter-spacing:.06em;white-space:nowrap}
+.bx-chips{display:flex;flex-wrap:wrap;gap:6px}
+.bx-chip{font:inherit;font-size:var(--cds-font-size-caption);padding:4px 11px;border-radius:999px;border:1px solid var(--bx-line);background:var(--color-panel);color:var(--bx-ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1.4;transition:background var(--cds-dur-slow),border-color var(--cds-dur-slow)}
+.bx-chip:hover{border-color:var(--bx-ink2)}
+.bx-chip[aria-pressed="true"]{background:var(--bx-ink);color:var(--color-bg);border-color:var(--bx-ink)}
+.bx-chip:focus-visible,.bx-sel:focus-visible,.bx-q:focus-visible,.bx-btn:focus-visible,.bx-hit:focus-visible,.bx th button:focus-visible{outline:2px solid var(--bx-gold);outline-offset:2px}
+.bx-seg{display:inline-flex;border:1px solid var(--bx-line);border-radius:999px;overflow:hidden;background:var(--color-panel)}
+.bx-seg button{font:inherit;font-size:var(--cds-font-size-caption);padding:5px 13px;border:0;background:none;color:var(--bx-ink2);cursor:pointer}
+.bx-seg button[aria-pressed="true"]{background:var(--bx-gold);color:#fff}
+.bx-sel,.bx-q{font:inherit;font-size:var(--cds-font-size-caption);padding:5px 10px;border:1px solid var(--bx-line);border-radius:8px;background:var(--color-panel);color:var(--bx-ink);min-width:0}
+.bx-q{width:min(240px,100%)}
+.bx-btn{font:inherit;font-size:var(--cds-font-size-caption);padding:5px 12px;border-radius:8px;border:1px solid var(--bx-line);background:none;color:var(--bx-ink2);cursor:pointer}
+.bx-btn:hover{color:var(--bx-ink);border-color:var(--bx-ink2)}
+.bx-sum{margin-left:auto;font-size:var(--cds-font-size-caption);color:var(--bx-ink2)}
+.bx-sum b{color:var(--bx-ink);font-weight:600}
+.bx-more{display:none}.bx-filter.open .bx-more{display:flex}
+.bx-nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0 -4px}
+.bx-nav::-webkit-scrollbar{display:none}
+.bx-nav a{flex:none;font-size:var(--cds-font-size-caption);color:var(--bx-ink2);text-decoration:none;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.bx-nav a:hover{background:var(--bx-soft);color:var(--bx-ink)}
+.bx-nav a:focus-visible{outline:2px solid var(--bx-gold);outline-offset:1px}
+.bx-sec,.bx-band,#overview{scroll-margin-top:120px}
+#kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+#kpis>.bx-kpi:first-child{grid-column:span 2;background:linear-gradient(135deg,color-mix(in srgb,var(--bx-gold) 10%,var(--color-panel)),var(--color-panel) 70%)}
+#kpis>.bx-kpi:first-child .bx-kv{font-size:40px}
+.bx-omix{display:flex;flex-direction:column;gap:9px;margin-top:16px;padding-top:14px;border-top:1px dashed var(--bx-line)}
+.bx-omix .r{display:grid;grid-template-columns:3.2rem minmax(0,1fr) 4.8rem;gap:10px;align-items:center;font-size:var(--cds-font-size-caption)}
+.bx-omix .r span:last-child{text-align:right;color:var(--bx-ink2)}
+.bx-br{display:block;font-size:11px;color:var(--bx-ink2);font-weight:400;margin-top:1px;max-width:15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:900px){#kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.bx-filter{position:static}.bx-seg{max-width:100%;overflow-x:auto}.bx-seg button{flex:none;white-space:nowrap}#kpis{gap:8px}#kpis .bx-kpi{padding:12px 13px}#kpis .bx-kv{font-size:24px}#kpis>.bx-kpi:first-child .bx-kv{font-size:32px}.bx-spark{display:none}.bx-dc .v{font-size:22px}}
+
+/* KPI */
+.bx-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12.5rem),1fr));gap:var(--cds-gap-md)}
+.bx-kpi{background:var(--color-panel);border:1px solid var(--bx-line);border-radius:calc(var(--cds-radius) * 1.5);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0;position:relative;overflow:hidden}
+.bx-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--k,var(--bx-line))}
+.bx-kl{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);letter-spacing:.04em}
+.bx-kv{font-family:var(--font-anthropic-serif);font-weight:400;font-size:30px;line-height:1.1;color:var(--bx-ink);display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.bx-kv small{font-family:var(--font-anthropic-sans);font-size:var(--cds-font-size-caption);color:var(--bx-ink2)}
+.bx-ks{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);line-height:1.6}
+.bx-up{color:var(--color-ok)}.bx-down{color:var(--color-bad)}
+.bx-spark{height:28px;margin-top:2px}
+
+/* cards */
+.bx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,30rem),1fr));gap:var(--cds-gap-md)}
+.bx-card{background:var(--color-panel);border:1px solid var(--bx-line);border-radius:calc(var(--cds-radius) * 1.5);padding:18px 20px;min-width:0;position:relative}
+.bx-ch{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.bx-h{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0;color:var(--bx-ink)}
+.bx-note{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);margin:3px 0 0;line-height:1.55}
+.bx-sec{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:10px 0 -4px;color:var(--bx-ink);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bx-sec small{font-family:var(--font-anthropic-sans);font-size:var(--cds-font-size-caption);color:var(--bx-ink2);letter-spacing:.06em}
+
+/* bar rows */
+.bx-bars{display:flex;flex-direction:column;gap:4px;min-height:200px}
+.bx-hit{display:grid;grid-template-columns:minmax(5.5rem,8.5rem) minmax(0,1fr) auto;gap:12px;align-items:center;padding:6px 8px;border-radius:8px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.bx-hit:hover{background:var(--bx-soft)}
+.bx-hit.on{background:var(--bx-sel)}
+.bx-bars.has-on .bx-hit:not(.on){opacity:.45}
+.bx-hit .n{font-size:var(--cds-font-size-body);display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bx-hit .v{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);white-space:nowrap;text-align:right}
+.bx-hit .v strong{font-size:var(--cds-font-size-body);color:var(--bx-ink);font-weight:600}
+.bx-track{height:12px;border-radius:6px;background:var(--bx-soft);overflow:hidden;display:flex}
+.bx-track i{display:block;height:100%}
+.bx-grp{font-size:var(--cds-font-size-caption);color:var(--bx-gold);letter-spacing:.14em;padding:8px 8px 2px}
+.bx-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.bx-leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:var(--cds-font-size-caption);color:var(--bx-ink2);margin-top:10px}
+.bx-leg span{display:inline-flex;align-items:center;gap:6px}
+.bx-empty{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);padding:24px 8px;text-align:center}
+
+/* owner table */
+.bx-own{width:100%;border-collapse:collapse;font-size:var(--cds-font-size-body)}
+.bx-own td,.bx-own th{padding:9px 8px;border-bottom:1px solid var(--bx-line);text-align:right;white-space:nowrap}
+.bx-own th{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);font-weight:500}
+.bx-own td:first-child,.bx-own th:first-child{text-align:left}
+.bx-own tbody tr{cursor:pointer}.bx-own tbody tr:hover td{background:var(--bx-soft)}.bx-own tbody tr.on td{background:var(--bx-sel)}
+
+/* visits chart */
+.bx-vis{min-height:230px}
+
+/* detail table */
+.bx-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:var(--cds-gap-md);align-items:start}
+@media(max-width:1000px){.bx-pair{grid-template-columns:minmax(0,1fr)}}
+.bx-feed li{grid-template-columns:5rem minmax(0,9rem) minmax(0,1fr)}
+.bx-md{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--cds-gap-md);align-items:start}
+
+.bx-tw{overflow:auto;max-height:640px;border-top:1px solid var(--bx-line)}
+.bx-t{border-collapse:collapse;width:100%;min-width:860px;font-size:var(--cds-font-size-body)}
+.bx-t th{position:sticky;top:0;background:var(--color-panel);z-index:1;text-align:left;font-weight:500;font-size:var(--cds-font-size-caption);color:var(--bx-ink2);border-bottom:1px solid var(--bx-line);padding:0;white-space:nowrap}
+.bx-t th button{font:inherit;color:inherit;background:none;border:0;padding:10px 10px;cursor:pointer;width:100%;text-align:inherit;display:flex;gap:4px;align-items:center}
+.bx-t th.r button{justify-content:flex-end}
+.bx-t th[aria-sort] button{color:var(--bx-ink)}
+.bx-t td{padding:9px 10px;border-bottom:1px solid var(--bx-line);vertical-align:middle;white-space:nowrap}
+.bx-t td.r,.bx-t th.r{text-align:right;white-space:nowrap}
+.bx-t tbody tr{cursor:pointer}.bx-t tbody tr:hover td{background:var(--bx-soft)}.bx-t tbody tr.on td{background:var(--bx-sel)}
+.bx-nm{font-weight:600;max-width:15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bx-mu{color:var(--bx-ink2);font-size:var(--cds-font-size-caption);white-space:nowrap}
+.bx-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:var(--cds-font-size-caption);white-space:nowrap;background:color-mix(in srgb,var(--p) 14%,transparent);color:var(--bx-ink)}
+.bx-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--p)}
+.bx-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--bx-line);color:var(--bx-ink2);margin:1px 3px 1px 0;white-space:nowrap}
+.bx-prog{display:flex;align-items:center;gap:6px;font-size:var(--cds-font-size-caption);color:var(--bx-ink2)}
+.bx-prog i{display:block;width:52px;height:5px;border-radius:3px;background:var(--bx-soft);overflow:hidden}
+.bx-prog i b{display:block;height:100%;background:var(--bx-gold)}
+.bx-foot2{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:10px;font-size:var(--cds-font-size-caption);color:var(--bx-ink2);flex-wrap:wrap}
+
+/* profile */
+.bx-prof{align-self:start}
+.bx-pn{font-family:var(--font-anthropic-serif);font-size:22px;line-height:1.3;margin:6px 0 4px;color:var(--bx-ink);word-break:break-all}
+.bx-kv2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 14px;font-size:var(--cds-font-size-caption);margin-top:14px}
+.bx-kv2 dt{color:var(--bx-ink2);white-space:nowrap}.bx-kv2 dd{margin:0;color:var(--bx-ink);min-width:0;word-break:break-word}
+.bx-quote{margin-top:14px;padding:10px 12px;border-left:3px solid var(--bx-gold);background:var(--bx-soft);border-radius:0 8px 8px 0;font-size:var(--cds-font-size-caption);line-height:1.7;color:var(--bx-ink)}
+.bx-tl{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px;max-height:260px;overflow:auto}
+.bx-tl li{display:grid;grid-template-columns:5.2rem minmax(0,1fr);gap:8px;font-size:var(--cds-font-size-caption);line-height:1.6}
+.bx-tl .d{color:var(--bx-ink2)}
+.bx-gm{height:44px;margin-top:10px}
+
+/* feed */
+.bx-feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.bx-feed li{display:grid;grid-template-columns:5.5rem minmax(0,12rem) minmax(0,1fr);gap:12px;padding:10px 4px;border-bottom:1px solid var(--bx-line);font-size:var(--cds-font-size-caption);line-height:1.6;align-items:start}
+@media(max-width:700px){.bx-feed li{grid-template-columns:minmax(0,1fr)}}
+.bx-feed .who{color:var(--bx-ink2)}
+.bx-feed .m{font-weight:600;color:var(--bx-ink);font-size:var(--cds-font-size-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* daily */
+.bx-kd{font-size:11px;letter-spacing:.02em;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:var(--bx-soft);color:var(--bx-ink2);align-self:flex-start}
+.bx-kd.up{color:var(--color-ok)}.bx-kd.down{color:var(--color-bad)}
+.bx-trend{min-height:250px}
+.bx-days{display:flex;gap:6px;overflow-x:auto;padding:12px 2px 2px;scrollbar-width:thin}
+.bx-day{font:inherit;flex:none;min-width:58px;padding:7px 8px;border-radius:10px;border:1px solid var(--bx-line);background:var(--color-panel);color:var(--bx-ink);cursor:pointer;text-align:center;line-height:1.3}
+.bx-day small{display:block;font-size:10px;color:var(--bx-ink2)}
+.bx-day b{display:block;font-family:var(--font-anthropic-serif);font-weight:400;font-size:17px}
+.bx-day i{display:block;height:3px;border-radius:2px;margin-top:5px;background:var(--bx-gold);opacity:.75}
+.bx-day[aria-pressed="true"]{background:var(--bx-ink);color:var(--color-bg);border-color:var(--bx-ink)}
+.bx-day[aria-pressed="true"] small{color:inherit;opacity:.8}
+.bx-day:focus-visible{outline:2px solid var(--bx-gold);outline-offset:2px}
+.bx-dhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:4px 0 0}
+.bx-dhead .d{font-family:var(--font-anthropic-serif);font-size:26px;color:var(--bx-ink)}
+.bx-dcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:10px}
+.bx-dc{font:inherit;text-align:left;cursor:pointer;background:var(--color-panel);border:1px solid var(--bx-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;color:var(--bx-ink);border-top:3px solid var(--k,var(--bx-line))}
+.bx-dc:hover{border-color:var(--bx-ink2)}
+.bx-dc[aria-pressed="true"]{background:var(--bx-sel);border-color:var(--bx-gold)}
+.bx-dc .l{font-size:var(--cds-font-size-caption);color:var(--bx-ink2)}
+.bx-dc .v{font-family:var(--font-anthropic-serif);font-size:28px;line-height:1.1}
+.bx-dc .s{font-size:11px;color:var(--bx-ink2)}
+.bx-dt{width:100%;border-collapse:collapse;font-size:var(--cds-font-size-body);min-width:720px}
+.bx-dt th{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);font-weight:500;text-align:right;padding:8px;border-bottom:1px solid var(--bx-line);white-space:nowrap}
+.bx-dt td{padding:8px;border-bottom:1px solid var(--bx-line);text-align:right;white-space:nowrap}
+.bx-dt th:first-child,.bx-dt td:first-child{text-align:left}
+.bx-dt tr.tot td{font-weight:600;border-top:1px solid var(--bx-ink2)}
+.bx-dt .z{color:var(--bx-line)}
+.bx-dt .p{color:var(--color-ok);font-weight:600}.bx-dt .n{color:var(--color-bad);font-weight:600}
+.bx-dt small{color:var(--bx-ink2);margin-left:4px;font-size:11px}
+.bx-log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:520px;overflow:auto}
+.bx-log li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:10px 4px;border-bottom:1px solid var(--bx-line);font-size:var(--cds-font-size-caption);line-height:1.6}
+.bx-log .m{font-weight:600;font-size:var(--cds-font-size-body);color:var(--bx-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bx-log .mv{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bx-log .r{text-align:right;color:var(--bx-ink2);white-space:nowrap}
+.bx-log .t{grid-column:1/-1;color:var(--bx-ink2)}
+.bx-split{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:var(--cds-gap-md);align-items:start}
+@media(max-width:1100px){.bx-split{grid-template-columns:minmax(0,1fr)}}
+.bx-funnel{min-height:330px}
+.bx-fn-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:var(--cds-font-size-caption);color:var(--bx-ink2);margin-top:8px}
+.bx-fn-leg span{display:inline-flex;align-items:center;gap:6px}
+/* mid band */
+.bx-band{border:1px solid color-mix(in srgb,var(--bx-gold) 45%,var(--bx-line));background:linear-gradient(180deg,color-mix(in srgb,var(--bx-gold) 7%,var(--color-panel)) 0%,var(--color-panel) 220px);border-radius:calc(var(--cds-radius) * 2);padding:clamp(16px,2.4vw,26px);display:flex;flex-direction:column;gap:var(--cds-gap-md)}
+.bx-band-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.bx-band-t{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:4px 0 0;color:var(--bx-ink)}
+.bx-band-take{font-size:var(--cds-font-size-body);line-height:1.8;color:var(--bx-ink2);margin:6px 0 0;max-width:80ch}
+.bx-band-take b{color:var(--bx-ink);font-weight:600}
+.bx-cmp{width:100%;border-collapse:collapse;font-size:var(--cds-font-size-body);min-width:560px}
+.bx-cmp th,.bx-cmp td{padding:9px 10px;border-bottom:1px solid var(--bx-line);text-align:right;white-space:nowrap}
+.bx-cmp th{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);font-weight:500}
+.bx-cmp td:first-child,.bx-cmp th:first-child{text-align:left;color:var(--bx-ink2)}
+.bx-cmp td.hl{background:color-mix(in srgb,var(--bx-gold) 9%,transparent);font-weight:600}
+.bx-cmp .gap{font-size:11px;margin-left:6px}
+.bx-sub2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));gap:var(--cds-gap-md)}
+.bx-st{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--bx-soft);margin:10px 0 8px}
+.bx-st i{display:block;height:100%}
+.bx-stl{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:var(--cds-font-size-caption);color:var(--bx-ink2)}
+.bx-stl span{display:inline-flex;align-items:center;gap:5px}
+.bx-stale{color:var(--color-bad);font-weight:600}
+.bx-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,34rem),1fr));gap:var(--cds-gap-md)}
+.bx-col{background:var(--color-panel);border:1px solid var(--bx-line);border-radius:calc(var(--cds-radius) * 1.5);padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0;position:relative;border-top:3px solid var(--k)}
+.bx-col-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.bx-col-t{font-family:var(--font-anthropic-serif);font-weight:400;font-size:24px;margin:0;color:var(--bx-ink)}
+.bx-col .bx-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media(max-width:520px){.bx-col .bx-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bx-col .bx-kpi{padding:10px 12px}
+.bx-col .bx-kv{font-size:22px}
+.bx-col .bx-own td,.bx-col .bx-own th{padding:7px 6px}
+.bx-pl tbody tr{cursor:pointer}.bx-pl tbody tr:hover td{background:var(--bx-soft)}
+/* pace & asks */
+.bx-pace{min-height:260px}
+.bx-chip2{display:inline-block;padding:2px 10px;border-radius:999px;font-size:var(--cds-font-size-caption);font-weight:600;white-space:nowrap}
+.bx-chip2.ok{background:color-mix(in srgb,var(--bx-agree) 16%,transparent);color:var(--bx-agree)}
+.bx-chip2.warn{background:color-mix(in srgb,var(--bx-consider) 18%,transparent);color:var(--bx-consider)}
+.bx-chip2.bad{background:color-mix(in srgb,var(--bx-refuse) 16%,transparent);color:var(--bx-refuse)}
+.bx-alert{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--bx-refuse) 8%,var(--color-panel));border:1px solid color-mix(in srgb,var(--bx-refuse) 30%,var(--bx-line));font-size:var(--cds-font-size-body);line-height:1.7;color:var(--bx-ink)}
+.bx-alert b{font-weight:600}
+.bx-asks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:var(--cds-gap-md)}
+.bx-ask{background:var(--color-panel);border:1px solid var(--bx-line);border-radius:calc(var(--cds-radius) * 1.5);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0;border-top:3px solid var(--k);position:relative}
+.bx-ask .q{font-size:var(--cds-font-size-caption);color:var(--bx-gold);letter-spacing:.08em}
+.bx-ask .t{font-family:var(--font-anthropic-serif);font-size:20px;color:var(--bx-ink);line-height:1.3}
+.bx-ask .need{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);line-height:1.6}
+.bx-ask .nums{display:flex;gap:16px;flex-wrap:wrap}
+.bx-ask .nums div{display:flex;flex-direction:column}
+.bx-ask .nums b{font-family:var(--font-anthropic-serif);font-weight:400;font-size:22px;color:var(--bx-ink)}
+.bx-ask .nums span{font-size:11px;color:var(--bx-ink2)}
+.bx-ask ol{margin:2px 0 0;padding-left:18px;font-size:var(--cds-font-size-caption);line-height:1.8;color:var(--bx-ink)}
+.bx-ask ol li span{color:var(--bx-ink2)}
+.bx-ask .bx-btn{align-self:flex-start;margin-top:auto}
+.bx-tip{position:absolute;z-index:8;background:var(--cds-surface-popover);border:1px solid var(--cds-border);border-radius:var(--cds-radius);box-shadow:var(--cds-shadow-popover);padding:var(--cds-pad-xs) var(--cds-pad-sm);font-size:var(--cds-font-size-caption);pointer-events:none;white-space:nowrap;line-height:1.7}
+.bx-tip .h{color:var(--cds-text-secondary)}
+.bx-tip .bx-dot{margin-right:6px}
+.bx-fail{display:flex;align-items:center;justify-content:center;gap:8px;min-height:inherit;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)}
+.bx-fail::before{content:"";width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad)}
+.bx-foot{font-size:var(--cds-font-size-caption);color:var(--bx-ink2);line-height:1.9;border-top:1px solid var(--bx-line);padding-top:var(--cds-pad-md);max-width:100ch}
+
+/* mobile */
+.bx svg text{pointer-events:none}
+.bx-scroll{background:linear-gradient(to right,var(--color-panel) 30%,transparent) left/28px 100% no-repeat local,linear-gradient(to left,var(--color-panel) 30%,transparent) right/28px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.14),transparent) left/10px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.14),transparent) right/10px 100% no-repeat scroll}
+.bx-mcards{display:none;flex-direction:column}
+.bx-mc{display:flex;flex-direction:column;gap:5px;padding:12px 2px;border-bottom:1px solid var(--bx-line);cursor:pointer}
+.bx-mc.on{background:var(--bx-sel)}
+.bx-mc .a{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bx-mc .a b{font-size:15px;font-weight:600;color:var(--bx-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bx-mc .m{font-size:12px;color:var(--bx-ink2);line-height:1.6}
+.bx-mc .m strong{color:var(--bx-ink);font-weight:600}
+@media(max-width:640px){
+  .bx-hit{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n v" "t t";row-gap:6px;padding:8px 6px}
+  .bx-hit .n{grid-area:n}.bx-hit .v{grid-area:v}.bx-hit .bx-track{grid-area:t}
+  .bx-scroll::before{content:"左右滑动查看全部列 →";display:block;position:sticky;left:0;font-size:11px;color:var(--bx-ink2);padding:0 0 6px;width:max-content}
+  .bx-seg button{padding:9px 14px}.bx-nav a{padding:9px 12px}.bx-btn{padding:9px 14px}.bx-q{padding:9px 10px;width:100%}.bx-chip{padding:7px 12px}.bx-sel{padding:9px 10px}
+  #table-card .bx-tw{display:none}#table-card .bx-mcards{display:flex}
+  .bx-col .bx-own th:nth-child(2),.bx-col .bx-own td:nth-child(2),.bx-col .bx-own th:nth-child(4),.bx-col .bx-own td:nth-child(4){display:none}
+  .bx-col .bx-nm{max-width:11rem}
+  .bx-card,.bx-col{padding:16px 14px}
+  .bx-band{padding:14px 10px}
+  .bx-days .bx-day{min-width:62px}
+  #mid-cmp{min-width:0;font-size:12px}#mid-cmp th,#mid-cmp td{padding:8px 4px;white-space:normal}#mid-cmp .gap{display:block;margin:0;font-size:10px}
+  #mid-cmp-card .bx-scroll::before{display:none}
+}
+/* 大市场分配 & 战区对比 */
+.bx-zrow{gap:8px 12px}
+.bx-zone button{font-size:var(--cds-font-size-body);padding:6px 16px;font-weight:600}
+.bx-zone button[aria-pressed="true"]{background:var(--bx-primary);color:var(--color-bg)}
+.bx-ztab td:first-child{font-weight:600}
+.bx-ztab td{position:relative}
+.bx-zbar,.bx-zrate{display:block;height:4px;border-radius:2px;margin-top:4px;background:var(--bx-soft);overflow:hidden;margin-left:auto;width:72px}
+.bx-zbar::after,.bx-zrate::after{content:"";display:block;height:100%;width:var(--w);background:var(--bx-gold);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.bx-zrate::after{background:var(--bx-agree)}
+/* 风险预警 */
+.bx-wcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9.5rem),1fr));gap:10px}
+.bx-wc{font:inherit;text-align:left;cursor:pointer;background:var(--color-panel);border:1px solid var(--bx-line);border-left:3px solid var(--bx-refuse);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;color:var(--bx-ink)}
+.bx-wc:hover{border-color:var(--bx-ink2)}
+.bx-wc[aria-pressed="true"]{background:color-mix(in srgb,var(--bx-refuse) 10%,var(--color-panel));border-color:var(--bx-refuse)}
+.bx-wc .l{font-size:var(--cds-font-size-caption);color:var(--bx-ink2)}
+.bx-wc .v{font-family:var(--font-anthropic-serif);font-size:24px;line-height:1.15}
+.bx-wc .s{font-size:11px;color:var(--bx-ink2)}
+.bx-wb{display:inline-block;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--bx-refuse) 14%,transparent);color:var(--bx-refuse);vertical-align:1px}
+.bx-wm{color:var(--bx-refuse)!important}
+/* 手机：战区按钮占满一行、横幅收紧、回到顶部 */
+@media(max-width:640px){
+  .bx-zone{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));width:100%}
+  .bx-zone button{padding:9px 0;font-size:13px}
+  .bx-zrow .bx-fl{display:none}
+  .bx-hero{padding:16px;gap:12px}
+  .bx-title{font-size:24px}
+  .bx-take{font-size:13px;line-height:1.75;margin-top:10px}
+  .bx-ring{gap:12px}.bx-ring-svg{width:96px;min-height:96px}.bx-ring-t .big{font-size:24px}
+  .bx-wc .v{font-size:20px}
+  .bx-wcs{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+}
+.bx-top{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:9;width:40px;height:40px;border-radius:50%;border:1px solid var(--bx-line);background:var(--color-panel);color:var(--bx-ink);box-shadow:0 6px 18px rgba(16,24,40,.15);font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.bx-top.show{opacity:1;pointer-events:auto}
+/* 加载骨架：数据到达前占位块轻微闪烁 */
+.bx-loading .bx-kv,.bx-loading .bx-take,.bx-loading .bx-ring-svg,.bx-loading .bx-card,.bx-loading .bx-dc{color:transparent!important;background-image:linear-gradient(90deg,var(--bx-soft) 0%,color-mix(in srgb,var(--bx-soft) 40%,var(--color-panel)) 50%,var(--bx-soft) 100%)!important;background-size:200% 100%!important;animation:bx-skel 1.2s linear infinite}
+.bx-loading .bx-card{min-height:160px}
+@keyframes bx-skel{from{background-position:200% 0}to{background-position:-200% 0}}
+[data-dash-source-state=empty]{color:transparent}
+[data-dash-source-state=refreshing]{opacity:.5;transition:opacity var(--cds-dur-slow)}
+@media (prefers-reduced-motion:no-preference){.bx-track i,.bx-prog b{transition:width var(--cds-dur-slow) var(--cds-ease-out)}}
+</style>
+<div class="bx-page">
+<div class="bx">
+<header class="bx-hero" id="overview">
+  <div>
+    <div class="bx-eyebrow">商务部 · 抽佣签约攻坚 · 拜访数据截至 <span class="bx-f" data-source="summary" data-field="as_of">—</span></div>
+    <h1 class="bx-title">抽佣签约 · 老板驾驶舱</h1>
+    <p class="bx-take" id="takeaway" data-source="merchants visits">—</p>
+  </div>
+  <div class="bx-ring" id="ring-card">
+    <div class="bx-ring-svg" id="bx-ring" data-source="kpi"></div>
+    <div class="bx-ring-t"><span>TOP300 签约进度（全局）</span><span class="big"><span class="bx-f" data-source="kpi" data-field="signed">—</span> / <span class="bx-f" data-source="kpi" data-field="total">—</span></span><span>未签 <span class="bx-f" data-source="kpi" data-field="unsigned_n">—</span> 家 · 9月 GMV <span class="bx-f" data-source="kpi" data-field="unsigned_gmv">—</span> 万</span></div>
+  </div>
+</header>
+
+<div class="bx-filter" id="filters">
+  <div class="bx-frow bx-zrow">
+    <span class="bx-fl">大市场</span>
+    <div class="bx-seg bx-zone" id="f-zone" role="group" aria-label="大市场分配">
+      <button type="button" data-z="">全部</button><button type="button" data-z="十三沙">十三沙</button><button type="button" data-z="沙河金马">沙河金马</button><button type="button" data-z="杭州">杭州</button><button type="button" data-z="其他">其他</button>
+    </div>
+  </div>
+  <div class="bx-frow">
+    <div class="bx-seg" id="f-preset" role="group" aria-label="范围">
+      <button type="button" data-p="t300">Top300</button><button type="button" data-p="t500">301–500</button><button type="button" data-p="t5800">501–800</button><button type="button" data-p="t800">重点 Top800</button><button type="button" data-p="all">全部未签池</button>
+    </div>
+    <input class="bx-q" id="f-q" type="search" placeholder="搜索商家名 / ID / 反馈" aria-label="搜索商家">
+    <button type="button" class="bx-btn bx-toggle" id="f-toggle" aria-expanded="false">筛选条件</button>
+    <button type="button" class="bx-btn" id="f-reset">重置</button>
+    <span class="bx-sum" id="f-sum" data-source="merchants">—</span>
+  </div>
+  <nav class="bx-nav" aria-label="页面导航"><a href="#overview">总览</a><a href="#zones">战区对比</a><a href="#warn">风险预警</a><a href="#pace">目标进度</a><a href="#asks">老板决策</a><a href="#daily">每日变化</a><a href="#funnel">攻坚漏斗</a><a href="#mid">腰部分档</a><a href="#where">结构分析</a><a href="#list">商家明细</a></nav>
+  <div class="bx-frow bx-more"><span class="bx-fl">分层</span><div class="bx-chips" id="f-tier"></div></div>
+  <div class="bx-frow bx-more"><span class="bx-fl">阶段</span><div class="bx-chips" id="f-stage"></div><span class="bx-fl">卡点</span><div class="bx-chips" id="f-block"></div></div>
+  <div class="bx-frow bx-more">
+    <select class="bx-sel" id="f-owner" aria-label="负责商务"></select>
+    <select class="bx-sel" id="f-region" aria-label="区域"></select>
+    <select class="bx-sel" id="f-market" aria-label="大市场"></select>
+    <select class="bx-sel" id="f-attr" aria-label="商家属性"></select>
+  </div>
+</div>
+
+<div class="bx-kpis" id="kpis" data-source="merchants visits">
+  <div class="bx-kpi" style="--k:var(--bx-gold)"><span class="bx-kl">待收抽佣增量</span><span class="bx-kv" id="k-u">—</span><span class="bx-ks" id="k-u-s">—</span><span class="bx-kd" id="k-u-d"></span></div>
+  <div class="bx-kpi" style="--k:var(--bx-ink)"><span class="bx-kl">未签商家</span><span class="bx-kv" id="k-n">—</span><span class="bx-ks" id="k-n-s">—</span><span class="bx-kd" id="k-n-d"></span></div>
+  <div class="bx-kpi" style="--k:var(--bx-gold)"><span class="bx-kl">9月 GMV 在途</span><span class="bx-kv" id="k-g">—</span><span class="bx-ks" id="k-g-s">—</span><span class="bx-kd" id="k-g-d"></span><div class="bx-spark" id="k-spark"></div></div>
+  <div class="bx-kpi" style="--k:var(--bx-agree)"><span class="bx-kl">已同意 · 待收口</span><span class="bx-kv" id="k-a">—</span><span class="bx-ks" id="k-a-s">—</span><span class="bx-kd" id="k-a-d"></span></div>
+  <div class="bx-kpi" style="--k:var(--bx-consider)"><span class="bx-kl">沟通考虑中</span><span class="bx-kv" id="k-c">—</span><span class="bx-ks" id="k-c-s">—</span><span class="bx-kd" id="k-c-d"></span></div>
+  <div class="bx-kpi" style="--k:var(--bx-refuse)"><span class="bx-kl">拒绝 · 未首访 · 退出</span><span class="bx-kv" id="k-r">—</span><span class="bx-ks" id="k-r-s">—</span><span class="bx-kd" id="k-r-d"></span></div>
+  <div class="bx-kpi" style="--k:var(--bx-primary)"><span class="bx-kl">近 30 天拜访</span><span class="bx-kv" id="k-v">—</span><span class="bx-ks" id="k-v-s">—</span><span class="bx-kd" id="k-v-d"></span></div>
+</div>
+
+<h2 class="bx-sec" id="zones">战区对比<small>按大市场分配 · 跟随分层范围 · 点任一行切换到该战区</small></h2>
+<div class="bx-card" id="zone-card" data-source="merchants signed visits">
+  <div class="bx-scroll" style="overflow-x:auto"><table class="bx-own bx-ztab"><thead><tr><th>战区</th><th>未签家数</th><th>签约率</th><th>已同意</th><th>考虑中</th><th>待收增量（万/月）</th><th>9月 GMV（万）</th><th>近30天拜访</th><th>近30天新签</th></tr></thead><tbody id="zone-t"></tbody></table></div>
+  <p class="bx-note" style="margin-top:8px">签约率 ＝ 已签（含已签待确认）÷（已签 ＋ 未签，不含已退出）；战区按商家「业绩归属」组别：十三沙 ＝ 十三行&amp;沙河，沙河金马 ＝ 沙河&amp;金马，杭州 ＝ 杭州市场及新意法&amp;濮院，其余为其他。</p>
+</div>
+
+<h2 class="bx-sec" id="warn">风险预警<small>自动识别需要跟进的商家 · 规则参考 Gong / Salesforce 的商机预警</small></h2>
+<div class="bx-card" id="warn-card" data-source="merchants">
+  <div class="bx-wcs" id="warn-cards"></div>
+  <p class="bx-note" id="warn-note" style="margin-top:10px">—</p>
+  <p class="bx-note">规则：同意未收口＝阶段为已同意且超 7 天没有拜访；超 14 天未跟进＝考虑中或拒绝且超 14 天没有拜访；反复沟通未推进＝拜访 3 次以上仍在考虑；超出预估时间＝预估谈判月份已过；已分派未首访＝表格状态为未拜访；退出风险＝反馈中出现退出、不合作等。日期以拜访数据截至日为准。</p>
+</div>
+
+<h2 class="bx-sec" id="pace">目标进度<small>Top800 未签清零 · 截止 12/15</small></h2>
+<div class="bx-alert" id="pace-alert" data-source="merchants signed">—</div>
+<div class="bx-grid">
+  <div class="bx-card" id="pace-card" data-source="merchants signed"><div class="bx-ch"><div><h3 class="bx-h">剩余未签走势</h3><p class="bx-note">实线为近 30 天实际剩余未签家数（不含已退出）；金色虚线为 12/15 清零的计划线；红色点线为按近 4 周签约速度的推演</p></div></div><div class="bx-pace" id="c-pace"></div></div>
+  <div class="bx-card" id="pace-t-card" data-source="merchants signed"><h3 class="bx-h">分档进度</h3><p class="bx-note" id="pace-note">—</p><div class="bx-scroll" style="overflow-x:auto;margin-top:8px"><table class="bx-cmp" id="c-pace-t"></table></div></div>
+</div>
+
+<h2 class="bx-sec" id="asks">需要老板决策<small>抽佣比例不可让，以下是需要平台层面给支持或做取舍的事项</small></h2>
+<div class="bx-asks" id="c-asks" data-source="merchants"></div>
+
+<h2 class="bx-sec" id="daily">每日变化<small>按拜访记录逐日还原 · 点图上任意一天或下方日期查看当天战报</small></h2>
+<div class="bx-card" id="trend-card" data-source="merchants signed visits">
+  <div class="bx-ch"><div><h3 class="bx-h">近 30 天走势</h3><p class="bx-note">上方折线为每天结束时各阶段家数（已同意含待确认），下方柱为当天拜访次数；当前筛选范围</p></div>
+    <div class="bx-seg" id="cmp-seg" role="group" aria-label="对比基准"><button type="button" data-c="1" aria-pressed="true">较前一日</button><button type="button" data-c="7" aria-pressed="false">较 7 天前</button></div></div>
+  <div class="bx-trend" id="c-trend"></div>
+  <div class="bx-leg" id="t-leg"></div>
+  <div class="bx-days" id="c-days" role="group" aria-label="选择日期"></div>
+</div>
+<div class="bx-dhead"><span class="d" id="d-title">—</span><span class="bx-note" id="d-sub">—</span></div>
+<div class="bx-dcards" id="c-dcards" data-source="merchants signed visits"></div>
+<div class="bx-split">
+  <div class="bx-card" id="dim-card"><div class="bx-ch"><div><h3 class="bx-h">各维度变化</h3><p class="bx-note" id="dim-note">所选日期相对对比基准的变化，绿色为向好、红色为变差</p></div>
+    <div class="bx-seg" id="dim-seg" role="group" aria-label="维度"><button type="button" data-d="owner" aria-pressed="true">商务</button><button type="button" data-d="market" aria-pressed="false">战区</button><button type="button" data-d="tier" aria-pressed="false">分层</button><button type="button" data-d="block" aria-pressed="false">卡点</button></div></div>
+    <div class="bx-scroll" style="overflow-x:auto"><table class="bx-dt" id="c-dim" data-source="merchants signed visits"><thead><tr><th>维度</th><th>拜访</th><th>新签约</th><th>新同意</th><th>阶段推进</th><th>新增拒绝</th><th>已同意（现值）</th><th>沟通中（现值）</th><th>近14天拜访</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="bx-card" id="log-card"><div class="bx-ch"><div><h3 class="bx-h">变化明细</h3><p class="bx-note" id="log-note">点上方卡片可只看某一类变化</p></div></div><ul class="bx-log" id="c-log" data-source="merchants signed visits"></ul></div>
+</div>
+
+<h2 class="bx-sec" id="funnel">攻坚漏斗<small>攻坚名单 → 已触达 → 有意向 → 已同意 → 已签约 · 跟随所选日期</small></h2>
+<div class="bx-card" id="funnel-card" data-source="merchants signed">
+  <div class="bx-ch"><div><h3 class="bx-h" id="fn-title">攻坚漏斗</h3><p class="bx-note" id="fn-note">—</p></div>
+    <div class="bx-seg" id="fn-seg" role="group" aria-label="漏斗度量"><button type="button" data-m="n" aria-pressed="true">按家数</button><button type="button" data-m="gmv" aria-pressed="false">按 9月 GMV</button></div></div>
+  <div class="bx-funnel" id="c-funnel"></div>
+  <div class="bx-fn-leg"><span><i class="bx-dot" style="background:var(--bx-primary)"></i>所选日期的规模</span><span><i class="bx-dot" style="background:var(--bx-gold)"></i>已签约（含拜访已登记、待系统确认）</span><span><i class="bx-dot" style="background:transparent;border:1.5px dashed var(--bx-gold)"></i>对比日规模（有变化时显示）</span></div>
+</div>
+
+<section class="bx-band" id="mid" data-source="merchants signed visits">
+  <div class="bx-band-h"><div><div class="bx-eyebrow">重点关注 · 腰部商家</div><h2 class="bx-band-t">Top301–500 与 Top501–800 分列</h2><p class="bx-band-take" id="mid-take">—</p></div></div>
+  <div class="bx-cols" id="mid-cols"></div>
+  <div class="bx-card" id="mid-cmp-card"><h3 class="bx-h">三档对比</h3><p class="bx-note">同一套筛选（负责人、区域、市场、搜索）下三档商家的签约与跟进力度；腰部两档与 Top300 比较</p><div class="bx-scroll" style="overflow-x:auto;margin-top:10px"><table class="bx-cmp" id="mid-cmp"></table></div></div>
+</section>
+
+<h2 class="bx-sec" id="where">钱卡在哪<small>点击任一条形即可联动筛选全页</small></h2>
+<div class="bx-grid">
+  <div class="bx-card" id="stage-card"><div class="bx-ch"><div><h3 class="bx-h">推进阶段</h3><p class="bx-note">当前筛选范围内，各阶段商家的 9 月 GMV</p></div><div class="bx-seg" id="m-seg" role="group" aria-label="度量"><button type="button" data-m="gmv" aria-pressed="true">按 GMV</button><button type="button" data-m="n" aria-pressed="false">按家数</button><button type="button" data-m="up" aria-pressed="false">按佣金增量</button></div></div><div class="bx-bars" id="c-stage" data-source="merchants"></div></div>
+  <div class="bx-card" id="block-card"><div class="bx-ch"><div><h3 class="bx-h">卡点画像</h3><p class="bx-note">按反馈与拜访记录关键词归类，一家可有多个卡点</p></div></div><div class="bx-bars" id="c-block" data-source="merchants"></div></div>
+  <div class="bx-card" id="market-card"><div class="bx-ch"><div><h3 class="bx-h">战区分布</h3><p class="bx-note">GMV 最高的 12 个市场，条内颜色为阶段构成</p></div></div><div class="bx-bars" id="c-market" data-source="merchants"></div><div class="bx-leg" id="c-leg"></div></div>
+  <div class="bx-card" id="owner-card"><div class="bx-ch"><div><h3 class="bx-h">商务兵力</h3><p class="bx-note">每位负责人名下的未签商家与近 30 天拜访，点击行筛选</p></div></div><div class="bx-scroll" style="overflow-x:auto"><table class="bx-own" id="c-owner" data-source="merchants visits"><thead><tr><th>负责人</th><th>未签家数</th><th>9月 GMV（万）</th><th>已同意</th><th>考虑中</th><th>拒绝/未访</th><th>近30天拜访</th></tr></thead><tbody></tbody></table></div><div class="bx-omix" id="c-owner-mix"></div></div>
+</div>
+
+<div class="bx-card" id="visit-card"><div class="bx-ch"><div><h3 class="bx-h">拜访节奏</h3><p class="bx-note">近 16 周，当前筛选范围内商家的拜访次数，按拜访方式拆分</p></div><div class="bx-leg" id="v-leg" style="margin-top:0"></div></div><div class="bx-vis" id="c-visit" data-source="visits merchants"></div></div>
+
+<h2 class="bx-sec" id="list">商家明细<small>点表头排序 · 点任意一行在下方查看商家档案</small></h2>
+<div class="bx-md">
+  <div class="bx-card" id="table-card">
+    <div class="bx-tw"><table class="bx-t" id="t-m" data-source="merchants" data-row-key="id"><thead><tr>
+      <th data-field="brand"><button type="button" data-k="brand">商家</button></th>
+      <th data-field="tier"><button type="button" data-k="tier">分层</button></th>
+      <th data-field="market"><button type="button" data-k="market">战区</button></th>
+      <th data-field="stage_label"><button type="button" data-k="stage_label">阶段</button></th>
+      <th data-field="progress"><button type="button" data-k="progress">完成度</button></th>
+      <th data-field="uplift" class="r"><button type="button" data-k="uplift">佣金增量（万/月）</button></th>
+      <th data-field="gmv_sep" class="r"><button type="button" data-k="gmv_sep">9月 GMV（万）</button></th>
+      <th data-field="blockers"><button type="button" data-k="blockers">卡点</button></th>
+      <th data-field="owner"><button type="button" data-k="owner">负责</button></th>
+      <th data-field="last_visit"><button type="button" data-k="last_visit">最近拜访</button></th>
+    </tr></thead><tbody></tbody></table></div>
+    <div class="bx-mcards" id="t-cards"></div>
+    <div class="bx-foot2"><span id="t-cnt">—</span><span><button type="button" class="bx-btn" id="t-more" hidden>显示全部</button> <button type="button" class="bx-btn" id="t-csv">导出当前筛选（CSV）</button></span></div>
+  </div>
+</div>
+
+<div class="bx-pair">
+<aside class="bx-card bx-prof" id="profile" data-source="merchants visits" aria-live="polite"></aside>
+<div class="bx-card" id="feed-card"><div class="bx-ch"><div><h3 class="bx-h">最新拜访动态</h3><p class="bx-note">当前筛选范围内最近 20 条拜访记录</p></div></div><ul class="bx-feed" id="c-feed" data-source="visits"></ul></div>
+</div>
+
+<p class="bx-foot">口径：未签商家取自“总未签约明细”，已签商家为“商家名单总表”中不在未签名单里的商家；分层按 26 年累计销售额排名，GMV 为销售口径，单位万元。阶段优先取最近一次拜访结论（表格状态常滞后）；表格写“已同意签约”而拜访尚未体现的仍算已同意；无拜访时取“10月后攻坚拜访状态”或“商家拜访状态”；从未拜访且未分派的长尾商家记为“未触达”；预估谈判时间写明退出或暂停的记为“已退出”；拜访已登记“已签约/转合同”但仍在未签名单的记为“已签待确认”。佣金增量＝9月 GMV ×（后续抽佣比例 − 当前抽佣比例），表示签下后每月多收的佣金，不考虑签约后 GMV 变化。目标为 12/15 前 Top800 未签清零。每日变化按拜访记录逐日还原：一家商家的阶段只在有拜访的那天改变，没有登记拜访的变化不会出现在每日变化里。签约日期优先取拜访登记“已签约”的日期，其次取合同签署时间，更早的签约不计入近 30 天新签。卡点由反馈文字关键词匹配得出，仅作研判参考。</p>
+</div>
+<p class="bx-snap" id="bx-snap">数据来源：飞书知识库「商务部签约进度表」· 每 10 分钟自动更新</p>
+</div>
+<script src="d3.min.js"></script>
+<script>
+(() => {
+  const calcs = {}, fns = [];
+  const get = id => { if (window.__BXD[id]) return {status: 'ok', data: window.__BXD[id], columns: []}; const c = calcs[id];
+    if (c) { if (!c.cache) c.cache = c.fn(...c.inputs.map(i => window.__BXD[i])); return {status: 'ok', data: c.cache, columns: []}; } return {status: 'missing', data: []}; };
+  window.dash = {colors: ['var(--bx-primary)', 'var(--bx-gold)', 'var(--bx-agree)', 'var(--bx-refuse)'], calc: (id, o) => { calcs[id] = o; }, data: get,
+    onData: fn => { fns.push(fn); fn(); }, params: () => ({}), setParams() {}, resetParams() {}, setLink() {}, refresh() {}, loader() {}};
+  let t, lw = window.innerWidth; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { if (Math.abs(window.innerWidth - lw) < 8) return; lw = window.innerWidth; fns.forEach(f => f()); }, 200); });
+})();
+</script>
+<script type="text/bx-main">
+(() => {
+dash.calc('kpi', {inputs: ['merchants', 'signed'], title: 'Top300 签约总览', description: 'top300 已签与未签家数、签约率及未签 9 月 GMV',
+  fn: (merchants, signed) => {
+    const t = merchants.filter(r => r.top300), s = signed.filter(r => r.top300).length;
+    return [{signed: s, total: s + t.length, rate: Math.round(s / (s + t.length) * 1000) / 10, unsigned_n: t.length, unsigned_gmv: Math.round(t.reduce((x, r) => x + r.gmv_sep, 0))}];
+  }});
+
+const ST = [['pending', '已签待确认'], ['agree', '已同意待签'], ['consider', '沟通考虑中'], ['refuse', '明确拒绝'], ['new', '未首访'], ['exit', '已退出'], ['pool', '未触达']];
+const SN2 = {...Object.fromEntries(ST), signed: '已签约'};
+const SN = Object.fromEntries(ST), SC = Object.fromEntries(ST.map(([k]) => [k, `var(--bx-${k})`]));
+const TIERS = ['top100', 'top101–200', 'top201–300', 'top301–500', 'top501–800', 'top800+'];
+const BL = ['利润', '平台机制', '税务', '老板决策', '退出风险', '增长乏力'];
+const DEADLINE = '2026-12-15';
+const PRE = {t300: TIERS.slice(0, 3), t500: [TIERS[3]], t5800: [TIERS[4]], t800: TIERS.slice(0, 5), all: TIERS};
+const nf = d3.format(','), w = v => nf(Math.round(v)), w1 = v => d3.format(',.1f')(v);
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const q = id => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const dot = c => { const d = el('i', 'bx-dot'); d.style.background = c; return d; };
+const pill = s => { const p = el('span', 'bx-pill', SN2[s]); p.style.setProperty('--p', s === 'signed' ? 'var(--bx-primary)' : SC[s]); return p; };
+const day = s => new Date(s + 'T00:00:00Z');
+
+const F = {zone: '', warns: new Set(), tiers: new Set(PRE.t800), stages: new Set(), blocks: new Set(), owner: '', region: '', market: '', attr: '', q: ''};
+// 链接里的 #zone=杭州 直接打开对应战区（飞书卡片按钮用）
+try { const z = new URLSearchParams(location.hash.slice(1)).get('zone'); if (z && ['十三沙', '沙河金马', '杭州', '其他'].includes(z)) F.zone = z; } catch (e) {}
+const saveHash = () => { try { history.replaceState(null, '', F.zone ? '#zone=' + encodeURIComponent(F.zone) : location.pathname); } catch (e) {} };
+let metric = 'gmv', sortK = 'uplift', sortD = -1, showAll = false, selId = null, built = false;
+
+function chipGroup(box, items, set, color) {
+  box.replaceChildren(...items.map(([k, lab]) => {
+    const b = el('button', 'bx-chip'); b.type = 'button'; b.dataset.k = k;
+    if (color) b.appendChild(dot(color(k)));
+    b.append(lab);
+    b.addEventListener('click', () => { set.has(k) ? set.delete(k) : set.add(k); showAll = false; draw(); });
+    return b;
+  }));
+}
+function syncChips() {
+  [['f-tier', F.tiers], ['f-stage', F.stages], ['f-block', F.blocks]].forEach(([id, s]) => q(id).querySelectorAll('.bx-chip').forEach(b => b.setAttribute('aria-pressed', s.has(b.dataset.k))));
+  const p = Object.entries(PRE).find(([, v]) => v.length === F.tiers.size && v.every(t => F.tiers.has(t)));
+  q('f-preset').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', !!p && p[0] === b.dataset.p));
+  q('f-zone').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.z === F.zone));
+  ['owner', 'region', 'market', 'attr'].forEach(k => q('f-' + k).value = F[k]);
+}
+function fillSelect(id, label, vals) {
+  const s = q(id); s.replaceChildren(new Option(label, ''), ...vals.map(v => new Option(v, v)));
+  s.addEventListener('change', () => { F[id.slice(2)] = s.value; showAll = false; draw(); });
+}
+function build(R) {
+  if (built) return; built = true;
+  chipGroup(q('f-tier'), TIERS.map(t => [t, t]), F.tiers);
+  chipGroup(q('f-stage'), ST, F.stages, k => SC[k]);
+  chipGroup(q('f-block'), BL.map(b => [b, b]), F.blocks);
+  const by = (k) => [...d3.rollup(R, v => d3.sum(v, r => r.gmv_sep), r => r[k])].sort((a, b) => b[1] - a[1]).map(d => d[0]).filter(Boolean);
+  fillSelect('f-owner', '全部负责人', by('owner'));
+  fillSelect('f-region', '全部区域', by('region'));
+  fillSelect('f-market', '全部市场', by('market'));
+  fillSelect('f-attr', '全部商家属性', by('attr'));
+  q('f-preset').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { F.tiers = new Set(PRE[b.dataset.p]); showAll = false; draw(); }));
+  q('f-zone').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { F.zone = b.dataset.z; F.owner = ''; F.market = ''; showAll = false; saveHash(); draw(); }));
+  let t; q('f-q').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => { F.q = e.target.value.trim().toLowerCase(); showAll = false; draw(); }, 150); });
+  q('f-reset').addEventListener('click', () => { Object.assign(F, {zone: '', warns: new Set(), tiers: new Set(PRE.t800), stages: new Set(), blocks: new Set(), owner: '', region: '', market: '', attr: '', q: ''}); q('f-q').value = ''; showAll = false; draw(); });
+  q('f-toggle').addEventListener('click', e => { const o = q('filters').classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); });
+  q('m-seg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { metric = b.dataset.m; q('m-seg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw(); }));
+  q('t-m').querySelectorAll('th button').forEach(b => b.addEventListener('click', () => { const k = b.dataset.k; if (sortK === k) sortD = -sortD; else { sortK = k; sortD = typeof (window.__bxR || [])[0]?.[k] === 'number' || k === 'progress' ? -1 : 1; } draw(); }));
+  q('t-more').addEventListener('click', () => { showAll = true; draw(); });
+  q('t-csv').addEventListener('click', () => {
+    const cols = [['商家ID', r => r.id], ['商家', r => r.name], ['战区', zoneOf], ['分层', r => r.tier], ['市场', r => r.market], ['阶段', r => SN[r.stage]],
+      ['风险预警', r => r.warn.map(x => WN[x]).join('、')], ['负责商务', r => r.owner], ['9月GMV(万)', r => r.gmv_sep], ['佣金增量(万/月)', r => r.uplift],
+      ['当前抽佣%', r => r.cur_rate], ['后续抽佣%', r => r.next_rate], ['卡点', r => r.blockers], ['最近拜访', r => r.last_visit], ['最近结论', r => r.last_result], ['最新反馈', r => r.latest_note]];
+    const esc = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const rows = (window.__bxL || []).slice().sort((a, b) => b.uplift - a.uplift);
+    const csv = '﻿' + [cols.map(c => c[0]), ...rows.map(r => cols.map(c => c[1](r)))].map(r => r.map(esc).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+    a.download = `抽佣驾驶舱_${F.zone || '全部'}_${window.__bxAsof}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  });
+}
+
+function tip(card, target, lines) {
+  const show = e => {
+    let t = card.querySelector('.bx-tip'); if (!t) { t = el('div', 'bx-tip'); card.appendChild(t); }
+    t.replaceChildren(...lines.map((l, i) => { const d = el('div', i === 0 ? 'h' : ''); if (l.c) d.appendChild(dot(l.c)); d.append(l.t); return d; }));
+    t.hidden = false;
+    const r = card.getBoundingClientRect(), tw = t.offsetWidth;
+    let x = e.clientX - r.left + 14; if (x + tw > r.width - 8) x = e.clientX - r.left - tw - 14;
+    t.style.left = Math.max(6, x) + 'px'; t.style.top = (e.clientY - r.top + 16) + 'px';
+  };
+  target.addEventListener('mousemove', show);
+  target.addEventListener('click', e => { show(e); clearTimeout(card.__tt); card.__tt = setTimeout(() => { const t = card.querySelector('.bx-tip'); if (t) t.hidden = true; }, 2600); });
+  target.addEventListener('mouseleave', () => { const t = card.querySelector('.bx-tip'); if (t) t.hidden = true; });
+}
+
+// 大市场分配：按业绩归属（组别）归到三个战区，其余归「其他」
+const ZONES = ['十三沙', '沙河金马', '杭州', '其他'];
+const zoneOf = r => { const g = r.group || ''; return g.includes('十三行') ? '十三沙' : g.includes('金马') ? '沙河金马' : (/^6/.test(g) || g.includes('杭州')) ? '杭州' : '其他'; };
+const zoneOk = r => !F.zone || zoneOf(r) === F.zone;
+
+// 风险预警（参考 Gong deal warnings / Salesforce Pipeline Inspection 的停滞、逾期、无跟进信号）
+const WARN = [['agreeStale', '同意未收口>7天'], ['stale', '超14天未跟进'], ['stuck', '反复沟通未推进'], ['overdue', '超出预估时间'], ['never', '已分派未首访'], ['exitRisk', '退出风险']];
+const WN = Object.fromEntries(WARN);
+function warnsOf(r, asof) {
+  if (r.stage === 'pending' || r.stage === 'exit' || r.stage === 'pool') return [];
+  const out = [], days = r.last_visit ? (day(asof) - day(r.last_visit)) / 864e5 : Infinity;
+  if (r.stage === 'agree' && days > 7) out.push('agreeStale');
+  if ((r.stage === 'consider' || r.stage === 'refuse') && days > 14) out.push('stale');
+  if (r.stage === 'consider' && r.visits >= 3) out.push('stuck');
+  const m = /(\d{1,2})月/.exec(r.est_month || ''); if (m && +m[1] < +asof.slice(5, 7)) out.push('overdue');
+  if (r.stage === 'new') out.push('never');
+  if ((r.blockers || '').includes('退出风险')) out.push('exitRisk');
+  return out;
+}
+
+function pass(r, skip) {
+  if (skip !== 'warn' && F.warns.size && !(r.warn || []).some(x => F.warns.has(x))) return false;
+  if (skip !== 'zone' && !zoneOk(r)) return false;
+  if (skip !== 'tier' && !F.tiers.has(r.tier)) return false;
+  if (skip !== 'stage' && F.stages.size && !F.stages.has(r.stage)) return false;
+  if (skip !== 'block' && F.blocks.size && !r.blockers.split('、').some(b => F.blocks.has(b))) return false;
+  if (skip !== 'owner' && F.owner && r.owner !== F.owner) return false;
+  if (F.region && r.region !== F.region) return false;
+  if (skip !== 'market' && F.market && r.market !== F.market) return false;
+  if (F.attr && r.attr !== F.attr) return false;
+  if (F.q && !(r.name + ' ' + r.id + ' ' + r.latest_note + ' ' + r.label).toLowerCase().includes(F.q)) return false;
+  return true;
+}
+
+function fill() {
+  document.querySelectorAll('.bx .bx-f').forEach(e => {
+    const d = dash.data(e.dataset.source);
+    e.classList.toggle('dash-skeleton', d.status === 'loading');
+    const v = d.status === 'ok' && d.data.length ? d.data[0][e.dataset.field] : null;
+    e.textContent = v == null ? '—' : typeof v === 'number' ? nf(v) : String(v);
+  });
+}
+
+function ring() {
+  const box = q('bx-ring'), k = dash.data('kpi');
+  box.replaceChildren();
+  if (k.status !== 'ok' || !k.data.length) return;
+  const r = k.data[0], svg = d3.select(box).append('svg').attr('viewBox', '0 0 132 132').attr('width', '100%');
+  const g = svg.append('g').attr('transform', 'translate(66,66)'), arc = d3.arc().innerRadius(52).outerRadius(60).cornerRadius(5);
+  g.append('path').attr('d', arc({startAngle: 0, endAngle: 2 * Math.PI})).style('fill', 'rgba(255,255,255,.12)');
+  g.append('path').attr('d', arc({startAngle: 0, endAngle: 2 * Math.PI * r.signed / r.total})).style('fill', 'var(--bx-gold)');
+  g.append('text').attr('text-anchor', 'middle').attr('y', 7).style('font-family', 'var(--font-anthropic-serif)').style('font-size', '26px').style('fill', 'var(--bx-hero-fg)').text(r.rate + '%');
+  g.append('text').attr('text-anchor', 'middle').attr('y', 26).style('font-size', '10px').style('fill', 'var(--bx-hero-mute)').text('签约率');
+}
+
+function setKV(id, big, unit) { const e = q(id); e.replaceChildren(big); if (unit) e.appendChild(el('small', '', unit)); }
+function sumG(a) { return d3.sum(a, r => r.gmv_sep); }
+
+function kpis(L, R, V30, V60, asof) {
+  const poolN = R.length, poolG = sumG(R);
+  setKV('k-n', nf(L.length), '家'); q('k-n-s').textContent = `占全部未签池 ${pct(L.length, poolN)}% · 共 ${nf(poolN)} 家`;
+  const g = sumG(L), aug = d3.sum(L, r => r.gmv_aug), ch = aug ? (g - aug) / aug : 0;
+  setKV('k-g', w(g), '万/月');
+  const s = q('k-g-s'); s.replaceChildren(`占未签池 GMV ${pct(g, poolG)}% · 环比 `); const c = el('span', ch >= 0 ? 'bx-up' : 'bx-down', (ch >= 0 ? '+' : '') + d3.format('.1%')(ch)); s.appendChild(c);
+  const ms = [['5月', 'gmv_may'], ['6月', 'gmv_jun'], ['7月', 'gmv_jul'], ['8月', 'gmv_aug'], ['9月', 'gmv_sep']].map(([m, k]) => ({m, v: d3.sum(L, r => r[k])}));
+  const sp = q('k-spark'); sp.replaceChildren();
+  const W = Math.max(120, sp.clientWidth), H = 28, x = d3.scalePoint(ms.map(d => d.m), [3, W - 3]), y = d3.scaleLinear([0, d3.max(ms, d => d.v) || 1], [H - 3, 3]);
+  const svg = d3.select(sp).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('height', H);
+  svg.append('path').attr('d', d3.line(d => x(d.m), d => y(d.v))(ms)).style('fill', 'none').style('stroke', 'var(--bx-gold)').style('stroke-width', 2).style('stroke-linecap', 'round').style('stroke-linejoin', 'round');
+  ms.forEach(d => { const c = svg.append('circle').attr('cx', x(d.m)).attr('cy', y(d.v)).attr('r', d.m === '9月' ? 3 : 2).style('fill', 'var(--bx-gold)'); tip(q('kpis'), c.node(), [{t: d.m}, {t: w(d.v) + ' 万'}]); });
+  const U0 = L.filter(r => r.stage !== 'exit'), up = d3.sum(U0, r => r.uplift);
+  setKV('k-u', d3.format(',.1f')(up), '万/月');
+  const top5 = U0.slice().sort((a, b) => b.uplift - a.uplift).slice(0, 5);
+  q('k-u-s').textContent = `签下全部 ${nf(U0.length)} 家后每月多收 · 前 5 家占 ${pct(d3.sum(top5, r => r.uplift), up)}%`;
+  const part = ks => L.filter(r => ks.includes(r.stage));
+  [['k-a', ['agree']], ['k-c', ['consider']], ['k-r', ['refuse', 'new', 'exit']]].forEach(([id, ks]) => { const a = part(ks); setKV(id, nf(a.length), '家'); q(id + '-s').textContent = `${w(sumG(a))} 万/月 · 占在途 ${pct(sumG(a), g)}%`; });
+  { const pd = part(['pending']); if (pd.length) q('k-a-s').textContent += ` · 另有已签待确认 ${pd.length} 家`; }
+  const vn = V30.length, vp = V60.length; setKV('k-v', nf(vn), '次');
+  const vs = q('k-v-s'); vs.replaceChildren(`覆盖 ${nf(new Set(V30.map(v => v.id)).size)} 家 · 较前 30 天 `);
+  vs.appendChild(el('span', vn >= vp ? 'bx-up' : 'bx-down', (vn >= vp ? '+' : '') + nf(vn - vp)));
+}
+
+function hitBars(box, card, items, isOn, onClick) {
+  box.classList.toggle('has-on', items.some(isOn));
+  if (!items.length) { box.replaceChildren(el('div', 'bx-empty', '当前筛选下没有商家')); return; }
+  const mv = d => metric === 'n' ? d.n : metric === 'up' ? (d.u || 0) : d.g, max = d3.max(items, mv) || 1;
+  box.replaceChildren(...items.flatMap(d => {
+    const out = [];
+    if (d.group) out.push(el('div', 'bx-grp', d.group));
+    const b = el('button', 'bx-hit' + (isOn(d) ? ' on' : '')); b.type = 'button';
+    const n = el('span', 'n'); if (d.c) n.appendChild(dot(d.c)); n.append(d.label);
+    const tr = el('div', 'bx-track'), val = mv(d);
+    const inner = el('div'); inner.style.cssText = `width:${Math.max(1.5, val / max * 100)}%;display:flex;height:100%`;
+    (d.parts || [{c: d.c || 'var(--bx-primary)', v: 1}]).forEach(p => { if (!p.v) return; const i = el('i'); i.style.width = (p.v / (d.parts ? d3.sum(d.parts, x => x.v) : 1) * 100) + '%'; i.style.background = p.c; inner.appendChild(i); });
+    tr.appendChild(inner);
+    const v = el('span', 'v'); v.append(el('strong', '', metric === 'n' ? nf(d.n) + ' 家' : metric === 'up' ? d3.format(',.1f')(d.u || 0) + ' 万' : w(d.g) + ' 万'), ' · ' + (metric === 'n' ? w(d.g) + ' 万' : nf(d.n) + ' 家'));
+    b.append(n, tr, v); b.setAttribute('aria-pressed', isOn(d));
+    b.addEventListener('click', () => onClick(d));
+    tip(card, b, d.tip);
+    out.push(b); return out;
+  }));
+}
+
+function stageMix(a) { const m = {}; a.forEach(r => { m[r.stage] = (m[r.stage] || 0) + (metric === 'n' ? 1 : metric === 'up' ? r.uplift : r.gmv_sep); }); return ST.map(([k]) => ({c: SC[k], v: m[k] || 0})); }
+
+function charts(L, R, V) {
+  // 阶段：忽略自身筛选，便于对比
+  const Ls = R.filter(r => pass(r, 'stage')), gAll = sumG(Ls) || 1;
+  hitBars(q('c-stage'), q('stage-card'), ST.map(([k, lab]) => { const a = Ls.filter(r => r.stage === k); return {k, label: lab, c: SC[k], n: a.length, g: sumG(a), u: d3.sum(a, r => r.uplift), tip: [{t: lab}, {t: `${nf(a.length)} 家 · ${w(sumG(a))} 万/月 · 占 ${pct(sumG(a), gAll)}%`}]}; }).filter(d => d.n),
+    d => F.stages.has(d.k), d => { F.stages.has(d.k) ? F.stages.delete(d.k) : F.stages.add(d.k); draw(); });
+  const Lb = R.filter(r => pass(r, 'block'));
+  hitBars(q('c-block'), q('block-card'), BL.map(b => { const a = Lb.filter(r => r.blockers.split('、').includes(b)); return {k: b, label: b, n: a.length, g: sumG(a), u: d3.sum(a, r => r.uplift), parts: stageMix(a), tip: [{t: b}, {t: `${nf(a.length)} 家 · ${w(sumG(a))} 万/月`}, ...ST.filter(([s]) => a.some(r => r.stage === s)).map(([s, l]) => ({c: SC[s], t: `${l} ${nf(a.filter(r => r.stage === s).length)} 家`}))]}; }).filter(d => d.n).sort((a, b) => (metric === 'n' ? b.n - a.n : metric === 'up' ? b.u - a.u : b.g - a.g)),
+    d => F.blocks.has(d.k), d => { F.blocks.has(d.k) ? F.blocks.delete(d.k) : F.blocks.add(d.k); draw(); });
+  const Lm = R.filter(r => pass(r, 'market'));
+  const mk = [...d3.group(Lm, r => r.market)].map(([m, a]) => ({k: m, label: m, region: a[0].region, n: a.length, g: sumG(a), u: d3.sum(a, r => r.uplift), parts: stageMix(a),
+    tip: [{t: `${m} · ${a[0].region}`}, ...ST.filter(([s]) => a.some(r => r.stage === s)).map(([s, l]) => { const x = a.filter(r => r.stage === s); return {c: SC[s], t: `${l}  ${nf(x.length)} 家 · ${w(sumG(x))} 万`}; })]}))
+    .sort((a, b) => (metric === 'n' ? b.n - a.n : metric === 'up' ? b.u - a.u : b.g - a.g)).slice(0, 12);
+  hitBars(q('c-market'), q('market-card'), mk, d => F.market === d.k, d => { F.market = F.market === d.k ? '' : d.k; draw(); });
+  q('c-leg').replaceChildren(...ST.map(([k, l]) => { const s = el('span'); s.append(dot(SC[k]), l); return s; }));
+  // 商务
+  const Lo = R.filter(r => pass(r, 'owner')), ids = new Set(Lo.map(r => r.id));
+  const tb = q('c-owner').querySelector('tbody');
+  tb.replaceChildren(...[...d3.group(Lo, r => r.owner)].sort((a, b) => sumG(b[1]) - sumG(a[1])).map(([o, a]) => {
+    const tr = el('tr', F.owner === o ? 'on' : ''), c = ks => nf(a.filter(r => ks.includes(r.stage)).length);
+    const mine = new Set(a.map(r => r.id)), vv = V.filter(v => mine.has(v.id)).length;
+    const n0 = el('td'); n0.append(el('strong', '', o)); n0.style.fontWeight = '600';
+    [n0, el('td', '', nf(a.length)), el('td', '', w(sumG(a))), el('td', '', c(['agree'])), el('td', '', c(['consider'])), el('td', '', c(['refuse', 'new', 'exit'])), el('td', '', nf(vv))].forEach(x => tr.appendChild(x));
+    tr.tabIndex = 0; const go = () => { F.owner = F.owner === o ? '' : o; draw(); };
+    tr.addEventListener('click', go); tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    return tr;
+  }));
+  { const og = [...d3.group(Lo, r => r.owner)].sort((a, b) => sumG(b[1]) - sumG(a[1])), om = d3.max(og, d => sumG(d[1])) || 1, box = q('c-owner-mix');
+    box.replaceChildren(el('div', 'bx-kl', '名下未签 GMV 的阶段构成'), ...og.map(([o, a]) => { const r = el('div', 'r'), tr = el('div', 'bx-track'), inner = el('div'); inner.style.cssText = `width:${sumG(a) / om * 100}%;display:flex;height:100%`;
+      ST.forEach(([k, l]) => { const g = sumG(a.filter(x => x.stage === k)); if (!g) return; const i = el('i'); i.style.width = g / sumG(a) * 100 + '%'; i.style.background = SC[k]; inner.appendChild(i); });
+      tr.appendChild(inner); tip(q('owner-card'), tr, [{t: o}, ...ST.filter(([k]) => a.some(x => x.stage === k)).map(([k, l]) => ({c: SC[k], t: `${l} ${w(sumG(a.filter(x => x.stage === k)))} 万`}))]);
+      r.append(el('span', '', o), tr, el('span', '', w(sumG(a)) + ' 万')); return r; })); }
+}
+
+const FORMS = [['现场拜访', 'var(--bx-primary)'], ['电话拜访', 'var(--bx-gold)'], ['线上拜访', 'var(--bx-agree)'], ['其他', 'var(--bx-pool)']];
+function visitChart(Vf, asof) {
+  const box = q('c-visit'), card = q('visit-card'); box.replaceChildren();
+  const end = day(asof), mon = t => { const d = new Date(t); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d; };
+  const last = mon(end), weeks = d3.range(15, -1, -1).map(i => new Date(last.getTime() - i * 7 * 864e5));
+  const key = d => d.toISOString().slice(0, 10);
+  const data = weeks.map(wk => { const a = Vf.filter(v => key(mon(day(v.date))) === key(wk)); const o = {wk, total: a.length}; FORMS.forEach(([f]) => o[f] = a.filter(v => (FORMS.some(x => x[0] === v.form) ? v.form : '其他') === f).length); return o; });
+  const W = Math.max(300, box.clientWidth), H = 230, m = {t: 22, r: 8, b: 28, l: 30};
+  const x = d3.scaleBand(data.map(d => key(d.wk)), [m.l, W - m.r]).padding(0.32);
+  const y = d3.scaleLinear([0, Math.max(4, d3.max(data, d => d.total))], [H - m.b, m.t]).nice();
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%');
+  y.ticks(4).forEach(t => { svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(t)).attr('y2', y(t)).style('stroke', 'var(--cds-chart-grid)'); svg.append('text').attr('x', m.l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text(t); });
+  const fmt = d3.utcFormat('%-m/%-d'), every = W < 520 ? 4 : 2;
+  data.forEach((d, i) => {
+    const bw = Math.min(30, x.bandwidth()), cx = x(key(d.wk)) + x.bandwidth() / 2; let y0 = H - m.b;
+    const g = svg.append('g');
+    FORMS.forEach(([f, c], j) => { const v = d[f]; if (!v) return; const h = (H - m.b) - y(v); g.append('rect').attr('x', cx - bw / 2).attr('width', bw).attr('y', y0 - h).attr('height', Math.max(0, h - 1)).attr('rx', 3).style('fill', c); y0 -= h; });
+    if (d.total) svg.append('text').attr('x', cx).attr('y', y(d.total) - 6).attr('text-anchor', 'middle').style('font-size', '11px').style('fill', 'var(--color-fg)').text(d.total);
+    if (i % every === (data.length - 1) % every) svg.append('text').attr('x', cx).attr('y', H - 9).attr('text-anchor', 'middle').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text(fmt(d.wk));
+    const hit = g.append('rect').attr('x', x(key(d.wk))).attr('width', x.bandwidth()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent');
+    tip(card, hit.node(), [{t: `${fmt(d.wk)} 起一周`}, {t: `合计 ${d.total} 次`}, ...FORMS.filter(([f]) => d[f]).map(([f, c]) => ({c, t: `${f} ${d[f]}`}))]);
+  });
+  q('v-leg').replaceChildren(...FORMS.map(([f, c]) => { const s = el('span'); s.append(dot(c), f); return s; }));
+}
+
+function table(L) {
+  const tb = q('t-m').querySelector('tbody');
+  const num = ['gmv_sep', 'progress', 'uplift'].includes(sortK);
+  const S = L.slice().sort((a, b) => { const x = a[sortK], y = b[sortK]; if (num) return ((x ?? -1) - (y ?? -1)) * sortD; return String(x).localeCompare(String(y), 'zh') * sortD; });
+  q('t-m').querySelectorAll('th').forEach(th => { const k = th.querySelector('button').dataset.k; if (k === sortK) th.setAttribute('aria-sort', sortD > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort'); th.querySelector('button').dataset.arrow = ''; });
+  const phone = window.innerWidth <= 640, shown = showAll ? S : S.slice(0, phone ? 20 : 150);
+  const gmax = d3.max(L, r => r.gmv_sep) || 1;
+  tb.replaceChildren(...shown.map(r => {
+    const tr = el('tr', r.id === selId ? 'on' : ''); tr.dataset.key = String(r.id); tr.tabIndex = 0;
+    const nm = el('td'), nd = el('div', 'bx-nm', r.brand); nm.appendChild(nd);
+    if (r.warn.length) { const wb = el('span', 'bx-wb', '⚠ ' + r.warn.length); wb.title = r.warn.map(x => WN[x]).join('、'); nd.append(' ', wb); }
+    const st = el('td'); st.appendChild(pill(r.stage));
+    const pg = el('td'); if (r.progress != null) { const p = el('span', 'bx-prog'), i = el('i'), b = el('b'); b.style.width = r.progress + '%'; i.appendChild(b); p.append(i, r.progress + '%'); pg.appendChild(p); } else pg.appendChild(el('span', 'bx-mu', '—'));
+    const gm = el('td', 'r', w1(r.gmv_sep));
+    const bl = el('td'); if (r.blockers) { const bs = r.blockers.split('、'); bs.slice(0, 2).forEach(t => bl.appendChild(el('span', 'bx-tag', t))); if (bs.length > 2) bl.appendChild(el('span', 'bx-mu', '+' + (bs.length - 2))); } else bl.appendChild(el('span', 'bx-mu', '—'));
+    const lv = el('td'); lv.appendChild(el('span', 'bx-mu', r.last_visit ? r.last_visit.slice(5).replace('-', '/') : '—'));
+    [nm, el('td', 'bx-mu', r.tier), el('td', 'bx-mu', r.market), st, pg, el('td', 'r', d3.format(',.2f')(r.uplift)), gm, bl, el('td', '', r.owner), lv].forEach(x => tr.appendChild(x));
+    const go = () => { selId = r.id; draw(); q('profile').scrollIntoView({behavior: 'smooth', block: 'center'}); };
+    tr.addEventListener('click', go); tr.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    return tr;
+  }));
+  if (!shown.length) { const tr = el('tr'), td = el('td', 'bx-empty', '当前筛选下没有商家，试试放宽筛选或点“重置”'); td.colSpan = 10; tr.appendChild(td); tb.appendChild(tr); }
+  q('t-cards').replaceChildren(...(phone ? shown : []).map(r => { const c = el('div', 'bx-mc' + (r.id === selId ? ' on' : '')); c.tabIndex = 0;
+    const a = el('div', 'a'); a.append(el('b', '', r.brand), pill(r.stage));
+    const m1 = el('div', 'm'); m1.append('增量 ', el('strong', '', d3.format(',.2f')(r.uplift) + ' 万/月'), ` · GMV ${w1(r.gmv_sep)} 万 · ${r.tier}`);
+    const m2 = el('div', 'm', `${r.market} · ${r.owner} · 最近拜访 ${r.last_visit ? md(r.last_visit) : '无'}${r.blockers ? ' · ' + r.blockers : ''}`);
+    c.append(a, m1, m2);
+    if (r.warn.length) c.appendChild(el('div', 'm bx-wm', '⚠ ' + r.warn.map(x => WN[x]).join(' · ')));
+    const go = () => { selId = r.id; draw(); q('profile').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+    c.addEventListener('click', go); c.addEventListener('keydown', e => { if (e.key === 'Enter') go(); }); return c; }));
+  q('t-cnt').textContent = `共 ${nf(L.length)} 家 · 9月 GMV ${w(sumG(L))} 万` + (shown.length < S.length ? ` · 先显示前 ${shown.length} 家` : '');
+  const mb = q('t-more'); mb.hidden = shown.length >= S.length; mb.textContent = `显示全部 ${nf(S.length)} 家`;
+}
+
+function profile(R, V, L) {
+  const box = q('profile'); box.replaceChildren();
+  let r = R.find(x => x.id === selId);
+  if (!r || !L.some(x => x.id === r.id)) { r = L.slice().sort((a, b) => b.gmv_sep - a.gmv_sep)[0]; selId = r ? r.id : null; }
+  if (!r) { box.appendChild(el('div', 'bx-empty', '选择一家商家查看档案')); return; }
+  box.appendChild(el('div', 'bx-eyebrow', `商家档案 · ID ${r.id}${r.stall ? ' · 档口 ' + r.stall : ''}`));
+  box.appendChild(el('div', 'bx-pn', r.brand));
+  const tags = el('div'); tags.append(pill(r.stage)); [r.tier, r.attr, r.label].filter(Boolean).forEach(t => { const s = el('span', 'bx-tag', t); s.style.marginLeft = '6px'; tags.appendChild(s); }); box.appendChild(tags);
+  const ms = [['5月', r.gmv_may], ['6月', r.gmv_jun], ['7月', r.gmv_jul], ['8月', r.gmv_aug], ['9月', r.gmv_sep]];
+  const gm = el('div', 'bx-gm'); box.appendChild(gm);
+  const W = Math.max(200, gm.clientWidth || 280), H = 44, x = d3.scaleBand(ms.map(d => d[0]), [0, W]).padding(.3), y = d3.scaleLinear([0, d3.max(ms, d => d[1]) || 1], [H - 14, 2]);
+  const svg = d3.select(gm).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%');
+  ms.forEach(([m, v]) => { svg.append('rect').attr('x', x(m)).attr('width', x.bandwidth()).attr('y', y(v)).attr('height', Math.max(1, H - 14 - y(v))).attr('rx', 3).style('fill', m === '9月' ? 'var(--bx-gold)' : 'var(--bx-pool)'); svg.append('text').attr('x', x(m) + x.bandwidth() / 2).attr('y', H - 2).attr('text-anchor', 'middle').style('font-size', '9px').style('fill', 'var(--color-fg-muted)').text(`${m} ${w(v)}`); });
+  const dl = el('dl', 'bx-kv2');
+  [['9月 GMV', w1(r.gmv_sep) + ' 万'], ['26年累计', w1(r.gmv_2026) + ' 万'], ['25年全年', w1(r.gmv_2025) + ' 万'], ['战区', `${r.market} · ${r.sub_market}`], ['负责', `${r.owner}${r.buyer ? ' · 买手 ' + r.buyer : ''}`],
+   ['抽佣', `现 ${r.cur_rate}% → 目标 ${r.next_rate}%`], ['佣金增量', `${d3.format(',.2f')(r.uplift)} 万/月`], ['谈判完成度', r.progress != null ? r.progress + '%' : '—'], ['供给判断', r.supply_view || '—'], ['预估谈判', r.est_month || '—'], ['卡点', r.blockers || '—'], ['批次/备注', r.batch || '—']]
+    .forEach(([k, v]) => { dl.append(el('dt', '', k), el('dd', '', v)); });
+  box.appendChild(dl);
+  if (r.latest_note) box.appendChild(el('div', 'bx-quote', r.latest_note));
+  const hist = V.filter(v => v.id === r.id).slice().reverse();
+  box.appendChild(el('div', 'bx-note', hist.length ? `拜访记录 ${hist.length} 次` : '暂无拜访记录'));
+  const ul = el('ul', 'bx-tl');
+  hist.forEach(v => { const li = el('li'), d = el('div', 'd', v.date.slice(5).replace('-', '/')), c = el('div'); c.append(el('strong', '', `${v.result || '—'}`), ` · ${v.person} · ${v.form}`); if (v.note) c.append(el('div', '', v.note)); li.append(d, c); ul.appendChild(li); });
+  box.appendChild(ul);
+}
+
+function feed(Vf) {
+  const ul = q('c-feed');
+  const a = Vf.slice().sort((x, y) => y.date.localeCompare(x.date) || y.vid - x.vid).slice(0, window.innerWidth <= 640 ? 8 : 20);
+  ul.replaceChildren(...a.map(v => { const li = el('li'), d = el('div', 'who'); d.append(v.date.slice(5).replace('-', '/'), el('br'), v.person);
+    const m = el('div'); m.append(el('div', 'm', v.name ? v.name.split('-').pop() : ('ID ' + v.id)), el('div', 'who', `${v.tier} · ${v.form}`));
+    const n = el('div'); n.append(el('strong', '', v.result || '—'), v.note ? ' · ' + v.note : ''); li.append(d, m, n); return li; }));
+  if (!a.length) ul.appendChild(el('li', 'bx-empty', '当前筛选范围内没有拜访记录'));
+}
+
+function takeaway(L, R) {
+  const p = q('takeaway'); p.replaceChildren();
+  const g = sumG(L), a = L.filter(r => r.stage === 'agree'), c = L.filter(r => r.stage === 'consider'), x = L.filter(r => ['refuse', 'new', 'exit'].includes(r.stage));
+  const topB = BL.map(b => ({b, g: sumG(L.filter(r => r.blockers.split('、').includes(b)))})).sort((u, v) => v.g - u.g)[0];
+  const topM = [...d3.rollup(L, v => sumG(v), r => r.market)].sort((u, v) => v[1] - u[1])[0];
+  const B = t => el('b', '', t);
+  if (!L.length) { p.textContent = '当前筛选下没有商家。'; return; }
+  p.append('当前范围内 ', B(nf(L.length) + ' 家'), ' 未签，全部签下每月可多收佣金 ', B(d3.format(',.1f')(d3.sum(L.filter(r => r.stage !== 'exit'), r => r.uplift)) + ' 万'), '；9月 GMV ', B(w(g) + ' 万'), '（占全部未签池 ', B(pct(g, sumG(R)) + '%'), '）。已同意待收口 ', B(nf(a.length) + ' 家 · ' + w(sumG(a)) + ' 万'), '，沟通中 ', B(nf(c.length) + ' 家'), '，拒绝或未首访 ', B(nf(x.length) + ' 家'), '。');
+  if (topB && topB.g) p.append('金额最集中的卡点是 ', B(topB.b), '（涉及 ' + w(topB.g) + ' 万）');
+  if (topM) p.append('，最大战区是 ', B(topM[0]), '（' + w(topM[1]) + ' 万）。');
+}
+
+// ---------- 每日还原 ----------
+const VS = {'沟通待考虑': 'consider', '明确拒绝': 'refuse', '已同意未签约': 'agree', '同意签约，等新方案落地': 'agree', '转合同': 'agree', '已签约': 'agree', '已签约二次拜访': 'agree'};
+const RK = {exit: 0, pool: 0, new: 1, refuse: 2, consider: 3, agree: 4, pending: 4.5, signed: 5};
+const ND = 31;
+let DAYS = [], HIST = new Map(), VBY = new Map(), sel = ND - 1, cmp = 1, dim = 'owner', logType = '', fnMetric = 'n';
+const iso = d => d.toISOString().slice(0, 10);
+const md = s => s.slice(5).replace('-', '/');
+const WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+function buildHist(R, S, V, asof) {
+  const end = day(asof); DAYS = d3.range(ND).map(i => iso(new Date(end.getTime() - (ND - 1 - i) * 864e5)));
+  VBY = d3.group(V.slice().sort((a, b) => a.date.localeCompare(b.date) || a.vid - b.vid), v => v.id);
+  HIST = new Map();
+  const pre = (vs, D, r) => { let st = null; for (const v of vs) { if (v.date > D) break; if (VS[v.result]) st = VS[v.result]; else if (v.result) st = st || 'consider'; } return st || (r.owner !== '招商全体' ? 'new' : 'pool'); };
+  R.forEach(r => { const vs = VBY.get(r.id) || [], lastD = vs.length ? vs[vs.length - 1].date : '';
+    HIST.set(r.id, DAYS.map(D => lastD > D ? pre(vs, D, r) : r.stage)); });
+  S.forEach(s => { const vs = (VBY.get(s.id) || []).filter(v => !['已签约', '已签约二次拜访'].includes(v.result));
+    HIST.set(s.id, DAYS.map(D => !s.sign_date || s.sign_date <= D ? 'signed' : pre(vs, D, s))); });
+}
+
+function passSigned(s) {
+  if (F.blocks.size || F.attr || F.warns.size) return false;
+  if (!zoneOk(s)) return false;
+  if (!F.tiers.has(s.tier)) return false;
+  if (F.owner && s.owner !== F.owner) return false;
+  if (F.region && s.region !== F.region) return false;
+  if (F.market && s.market !== F.market) return false;
+  if (F.q && !(s.name + ' ' + s.id).toLowerCase().includes(F.q)) return false;
+  return true;
+}
+
+function events(O, b, e) {
+  const out = [];
+  O.forEach(r => { const h = HIST.get(r.id); if (!h) return; const f = h[b], t = h[e]; if (f === t) return;
+    let type = RK[t] > RK[f] ? (t === 'signed' ? 'sign' : (t === 'agree' || t === 'pending') ? 'agree' : t === 'refuse' ? 'refuse' : 'up') : (t === 'exit' ? 'down' : t === 'refuse' ? 'refuse' : 'down');
+    const vs = (VBY.get(r.id) || []).filter(v => v.date > DAYS[b] && v.date <= DAYS[e]);
+    out.push({r, f, t, type, fwd: RK[t] > RK[f] && t !== 'refuse', v: vs[vs.length - 1]}); });
+  return out;
+}
+const visitsIn = (Vo, b, e) => Vo.filter(v => v.date > DAYS[b] && v.date <= DAYS[e]);
+
+function trendChart(O, Vo) {
+  const box = q('c-trend'), card = q('trend-card'); box.replaceChildren();
+  const lines = [['agree', '已同意待签', 'var(--bx-agree)'], ['consider', '沟通中', 'var(--bx-consider)'], ['refuse', '明确拒绝', 'var(--bx-refuse)'], ['signedNew', '30天累计新签', 'var(--bx-primary)']];
+  const _cnt = (h, i) => h[i];
+  const H0 = O.map(r => HIST.get(r.id));
+  const vc = d3.rollup(Vo, a => a.length, v => v.date);
+  const data = DAYS.map((D, i) => { const o = {D, i, visits: vc.get(D) || 0, agree: 0, consider: 0, refuse: 0, signedNew: 0};
+    H0.forEach(h => { if (!h) return; const s = h[i] === 'pending' ? 'agree' : h[i]; if (s === 'agree' || s === 'consider' || s === 'refuse') o[s]++; if (s === 'signed' && h[0] !== 'signed') o.signedNew++; }); return o; });
+  const W = Math.max(320, box.clientWidth), H = 290, m = {t: 18, r: 64, b: 26, l: 34}, LB = 188, VT = 214;
+  const x = d3.scaleBand(DAYS, [m.l, W - m.r]).padding(0.28);
+  const yl = d3.scaleLinear([0, Math.max(4, d3.max(data, d => Math.max(d.agree, d.consider, d.refuse, d.signedNew)))], [LB, m.t]).nice();
+  const yb = d3.scaleLinear([0, Math.max(4, d3.max(data, d => d.visits))], [H - m.b, VT]);
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%');
+  yl.ticks(4).forEach(t => { svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', yl(t)).attr('y2', yl(t)).style('stroke', 'var(--cds-chart-grid)'); svg.append('text').attr('x', m.l - 6).attr('y', yl(t) + 4).attr('text-anchor', 'end').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text(t); });
+  const cx = D => x(D) + x.bandwidth() / 2, bw = Math.min(14, x.bandwidth());
+  const base = Math.max(0, sel - cmp);
+  svg.append('rect').attr('x', x(DAYS[base]) - 2).attr('width', x(DAYS[sel]) - x(DAYS[base]) + x.bandwidth() + 4).attr('y', m.t - 8).attr('height', LB - m.t + 16).attr('rx', 6).style('fill', 'var(--bx-sel)');
+  svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).style('stroke', 'var(--cds-chart-axis)');
+  svg.append('text').attr('x', m.l - 6).attr('y', VT + 4).attr('text-anchor', 'end').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text('拜访');
+  svg.append('text').attr('x', m.l - 6).attr('y', m.t - 6).attr('text-anchor', 'end').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text('家数');
+  data.forEach(d => { if (!d.visits) return; svg.append('rect').attr('x', cx(d.D) - bw / 2).attr('width', bw).attr('y', yb(d.visits)).attr('height', H - m.b - yb(d.visits)).attr('rx', 3).style('fill', d.i === sel ? 'var(--bx-gold)' : 'var(--bx-pool)');
+    if (W > 640) svg.append('text').attr('x', cx(d.D)).attr('y', yb(d.visits) - 3).attr('text-anchor', 'middle').style('font-size', '9px').style('fill', 'var(--color-fg-muted)').text(d.visits); });
+  const ends = [];
+  lines.forEach(([k, lab, c]) => {
+    svg.append('path').attr('d', d3.line(d => cx(d.D), d => yl(d[k]))(data)).style('fill', 'none').style('stroke', c).style('stroke-width', 2).style('stroke-linejoin', 'round').style('stroke-linecap', 'round');
+    const L = data[data.length - 1]; svg.append('circle').attr('cx', cx(L.D)).attr('cy', yl(L[k])).attr('r', 3.5).style('fill', c);
+    ends.push({y: yl(L[k]), t: `${lab} ${L[k]}`, c});
+  });
+  ends.sort((a, b) => a.y - b.y); for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
+  ends.forEach(e => svg.append('text').attr('x', W - m.r + 6).attr('y', e.y + 4).style('font-size', '10px').style('fill', e.c).text(e.t.split(' ')[1]));
+  const f = d => md(d), every = W < 560 ? 7 : 3;
+  DAYS.forEach((D, i) => { if ((ND - 1 - i) % every === 0) svg.append('text').attr('x', cx(D)).attr('y', H - 8).attr('text-anchor', 'middle').style('font-size', '10px').style('fill', i === sel ? 'var(--color-fg)' : 'var(--color-fg-muted)').text(f(D)); });
+  const guide = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--cds-chart-reference)').style('opacity', 0);
+  data.forEach(d => {
+    const hit = svg.append('rect').attr('x', x(d.D) - x.step() * x.padding() / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent').style('cursor', 'pointer');
+    hit.on('mouseenter', () => guide.attr('x1', cx(d.D)).attr('x2', cx(d.D)).style('opacity', 1)).on('mouseleave', () => guide.style('opacity', 0)).on('click', () => { sel = d.i; draw(); });
+    tip(card, hit.node(), [{t: `${md(d.D)} ${WD[day(d.D).getUTCDay()]}`}, {c: 'var(--bx-pool)', t: `拜访 ${d.visits} 次`}, ...lines.map(([k, lab, c]) => ({c, t: `${lab} ${d[k]}`}))]);
+  });
+  q('t-leg').replaceChildren(...[['var(--bx-pool)', '每日拜访'], ...lines.map(l => [l[2], l[1]])].map(([c, l]) => { const s = el('span'); s.append(dot(c), l); return s; }));
+  // 日期条
+  const box2 = q('c-days'), vmax = d3.max(data, d => d.visits) || 1;
+  box2.replaceChildren(...data.slice(-14).map(d => { const b = el('button', 'bx-day'); b.type = 'button'; b.setAttribute('aria-pressed', d.i === sel);
+    b.append(el('small', '', WD[day(d.D).getUTCDay()]), el('b', '', md(d.D)), el('small', '', `${d.visits} 次拜访`)); const i = el('i'); i.style.width = Math.max(6, d.visits / vmax * 100) + '%'; b.appendChild(i);
+    b.addEventListener('click', () => { sel = d.i; draw(); }); return b; }));
+  const on = box2.querySelector('[aria-pressed="true"]'); if (on) box2.scrollLeft = on.offsetLeft - box2.clientWidth + on.offsetWidth + 8;
+}
+
+function dailyCards(O, Vo, EV, b) {
+  const P = visitsIn(Vo, b, sel), pb = Math.max(0, b - (sel - b)), PP = visitsIn(Vo, pb, b);
+  const cnt = t => EV.filter(e => e.type === t), g = a => w(d3.sum(a, e => e.r.gmv_sep));
+  const fw2 = EV.filter(e => e.fwd), bk = EV.filter(e => !e.fwd && e.type !== 'refuse');
+  const per = cmp === 1 ? '当天' : '7 天内';
+  q('d-title').textContent = `${md(DAYS[sel])} ${WD[day(DAYS[sel]).getUTCDay()]}`;
+  q('d-sub').textContent = `对比 ${md(DAYS[b])}（${cmp === 1 ? '前一日' : '7 天前'}）· 当前筛选 ${nf(O.length)} 家商家（含已签）`;
+  const C = [
+    ['', '拜访次数', nf(P.length), `覆盖 ${nf(new Set(P.map(v => v.id)).size)} 家 · 上一期 ${nf(PP.length)} 次`, 'var(--bx-ink)'],
+    ['sign', '新签约', nf(cnt('sign').length), `${g(cnt('sign'))} 万/月`, 'var(--bx-primary)'],
+    ['agree', '新同意签约', nf(cnt('agree').length), `${g(cnt('agree'))} 万/月`, 'var(--bx-agree)'],
+    ['up', '阶段推进', nf(fw2.length), `含签约与同意，${g(fw2)} 万/月`, 'var(--bx-gold)'],
+    ['refuse', '新增拒绝', nf(cnt('refuse').length), `${g(cnt('refuse'))} 万/月`, 'var(--bx-refuse)'],
+    ['down', '回退 / 退出', nf(bk.length), `${g(bk)} 万/月`, 'var(--bx-exit)']];
+  q('c-dcards').replaceChildren(...C.map(([t, l, v, s, c]) => { const b2 = el('button', 'bx-dc'); b2.type = 'button'; b2.style.setProperty('--k', c); b2.setAttribute('aria-pressed', logType === t && t !== '');
+    b2.append(el('span', 'l', `${per}${l}`), el('span', 'v', v), el('span', 's', s));
+    b2.addEventListener('click', () => { logType = logType === t ? '' : t; draw(); }); return b2; }));
+}
+
+function dimTable(O, Vo, EV, b) {
+  const key = r => dim === 'block' ? (r.blockers ? r.blockers.split('、') : ['无卡点']) : [r[dim] || '未知'];
+  const G = new Map(); O.forEach(r => key(r).forEach(k => { if (!G.has(k)) G.set(k, []); G.get(k).push(r); }));
+  const d14 = DAYS.slice(-14);
+  const rows = [...G].map(([k, a]) => { const ids = new Set(a.map(r => r.id)), ev = EV.filter(e => ids.has(e.r.id)), vv = Vo.filter(v => ids.has(v.id));
+    const at = (i, s) => a.filter(r => HIST.get(r.id)[i] === s).length;
+    return {k, n: a.length, vis: visitsIn(vv, b, sel).length, sign: ev.filter(e => e.type === 'sign').length, agree: ev.filter(e => e.type === 'agree').length, up: ev.filter(e => e.fwd).length, ref: ev.filter(e => e.type === 'refuse').length,
+      ag: at(sel, 'agree'), agd: at(sel, 'agree') - at(b, 'agree'), co: at(sel, 'consider'), cod: at(sel, 'consider') - at(b, 'consider'), sp: d14.map(D => vv.filter(v => v.date === D).length)}; })
+    .filter(r => r.vis || r.up || r.ref || r.ag || r.co).sort((x, y) => (y.vis + y.up * 3 + y.ref * 2) - (x.vis + x.up * 3 + x.ref * 2) || y.ag - x.ag).slice(0, 14);
+  const tb = q('c-dim').querySelector('tbody'), smax = d3.max(rows.flatMap(r => r.sp)) || 1;
+  const cell = (v, good) => { const td = el('td'); if (!v) { td.appendChild(el('span', 'z', '·')); return td; } td.appendChild(el('span', good === null ? '' : (good ? 'p' : 'n'), (good !== null && v > 0 ? '+' : '') + nf(v))); return td; };
+  const now = (v, d, goodUp) => { const td = el('td', '', nf(v)); if (d) td.appendChild(el('small', (d > 0) === goodUp ? 'p' : 'n', (d > 0 ? '▲' : '▼') + Math.abs(d))); return td; };
+  const spark = a => { const td = el('td'), W = 84, H = 20, s = d3.select(td).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', W).attr('height', H); const bw = W / a.length;
+    a.forEach((v, i) => s.append('rect').attr('x', i * bw + 1).attr('width', bw - 2).attr('y', H - Math.max(1.5, v / smax * H)).attr('height', Math.max(1.5, v / smax * H)).attr('rx', 1).style('fill', i === a.length - 1 - (ND - 1 - sel) ? 'var(--bx-gold)' : 'var(--bx-pool)')); return td; };
+  tb.replaceChildren(...rows.map(r => { const tr = el('tr'), n = el('td'); n.append(el('strong', '', r.k), el('small', '', `${nf(r.n)} 家`)); tr.append(n, cell(r.vis, null), cell(r.sign, true), cell(r.agree, true), cell(r.up, true), cell(r.ref, false), now(r.ag, r.agd, true), now(r.co, r.cod, true), spark(r.sp)); return tr; }));
+  if (!rows.length) { const tr = el('tr'), td = el('td', 'bx-empty', '所选期间这个范围内没有变化'); td.colSpan = 9; tr.appendChild(td); tb.appendChild(tr); return; }
+  const T = rows.reduce((a, r) => { ['vis', 'sign', 'agree', 'up', 'ref'].forEach(k => a[k] += r[k]); return a; }, {vis: 0, sign: 0, agree: 0, up: 0, ref: 0});
+  if (dim !== 'block') { const ids = O, at = (i, s) => ids.filter(r => HIST.get(r.id)[i] === s).length; const tr = el('tr', 'tot'); tr.append(el('td', '', '合计'), cell(visitsIn(Vo, b, sel).length, null), cell(EV.filter(e => e.type === 'sign').length, true), cell(EV.filter(e => e.type === 'agree').length, true), cell(EV.filter(e => e.fwd).length, true), cell(EV.filter(e => e.type === 'refuse').length, false), now(at(sel, 'agree'), at(sel, 'agree') - at(b, 'agree'), true), now(at(sel, 'consider'), at(sel, 'consider') - at(b, 'consider'), true), el('td')); tb.appendChild(tr); }
+  q('dim-note').textContent = `${md(DAYS[sel])} 相对 ${md(DAYS[b])} 的变化，绿色为向好、红色为变差；只列出有动作的${{owner: '商务', market: '战区', tier: '分层', block: '卡点'}[dim]}`;
+}
+
+function changeLog(EV, Vo, b) {
+  const ul = q('c-log');
+  let a = EV.filter(e => !logType || (logType === 'up' ? e.fwd : logType === 'down' ? (!e.fwd && e.type !== 'refuse') : e.type === logType));
+  a = a.sort((x, y) => RK[y.t] - RK[x.t] || y.r.gmv_sep - x.r.gmv_sep).slice(0, 60);
+  const typeName = {'': '全部变化', sign: '新签约', agree: '新同意签约', pending: '已签待确认', up: '阶段推进', refuse: '新增拒绝', down: '回退 / 退出'}[logType];
+  q('log-note').textContent = `${typeName} · ${a.length} 家${logType ? '（再点卡片取消）' : '，点上方卡片可只看某一类'}`;
+  const items = a.map(e => { const li = el('li'), l = el('div'); l.append(el('div', 'm', e.r.brand || e.r.name));
+    const mv = el('div', 'mv'); mv.append(pill(e.f), '→', pill(e.t)); l.appendChild(mv);
+    const r = el('div', 'r'); r.append(el('div', '', `${w1(e.r.gmv_sep)} 万 · ${e.r.tier}`), el('div', '', e.v ? `${md(e.v.date)} ${e.v.person} · ${e.v.form}` : e.r.sign_src || ''));
+    li.append(l, r); if (e.v && e.v.note) li.appendChild(el('div', 't', e.v.note)); return li; });
+  if (!items.length) { const vv = visitsIn(Vo, b, sel); items.push(el('li', 'bx-empty', vv.length ? `所选期间有 ${vv.length} 次拜访，但没有商家改变阶段` : '所选期间没有拜访，也没有阶段变化')); }
+  ul.replaceChildren(...items);
+}
+
+function funnel(O, b) {
+  const box = q('c-funnel'), card = q('funnel-card'); box.replaceChildren();
+  const O2 = O.filter(r => { const hh = HIST.get(r.id); return hh && hh[0] !== 'signed'; }), early = O.length - O2.length;
+  const ST5 = [['攻坚名单', () => true], ['已触达', s => !['pool', 'new', 'exit'].includes(s)], ['有意向', s => ['consider', 'agree', 'pending', 'signed'].includes(s)], ['已同意', s => ['agree', 'pending', 'signed'].includes(s)], ['已签约', s => ['pending', 'signed'].includes(s)]];
+  const val = (i, f) => { let n = 0, g = 0, u = 0; O2.forEach(r => { if (f(HIST.get(r.id)[i])) { n++; g += r.gmv_sep; u += r.uplift || 0; } }); return {n, g, u}; };
+  const cur = ST5.map(([l, f]) => ({l, ...val(sel, f)})), old = ST5.map(([, f]) => val(b, f));
+  const V = d => fnMetric === 'n' ? d.n : d.g, fmt = v => fnMetric === 'n' ? nf(v) + ' 家' : w(v) + ' 万';
+  const W = Math.max(330, box.clientWidth), narrow = W < 680, rowH = narrow ? 64 : 58, top = narrow ? 18 : 4, H = rowH * cur.length + top + 4;
+  const lw = narrow ? 0 : 130, rw = narrow ? 0 : 250, cw = W - lw - rw, mx = V(cur[0]) || 1, c0 = lw + cw / 2;
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%');
+  let worst = -1, wr = 2; cur.forEach((d, i) => { if (i && V(cur[i - 1])) { const r = V(d) / V(cur[i - 1]); if (r < wr) { wr = r; worst = i; } } });
+  const wid = v => Math.max(6, v / mx * cw * .94);
+  cur.forEach((d, i) => {
+    const y = top + i * rowH, bh = rowH - 22, wd = wid(V(d)), ow = wid(V(old[i])), last = i === cur.length - 1;
+    if (!last) { const nw = wid(V(cur[i + 1])); svg.append('path').attr('d', `M${c0 - wd / 2},${y + bh} L${c0 + wd / 2},${y + bh} L${c0 + nw / 2},${y + rowH} L${c0 - nw / 2},${y + rowH} Z`).style('fill', 'var(--bx-primary)').style('opacity', .08); }
+    const bar = svg.append('rect').attr('x', c0 - wd / 2).attr('y', y).attr('width', wd).attr('height', bh).attr('rx', 6).style('fill', last ? 'var(--bx-gold)' : 'var(--bx-primary)').style('opacity', last ? 1 : 1 - i * 0.14);
+    if (Math.abs(ow - wd) > 1) [-1, 1].forEach(sg => svg.append('line').attr('x1', c0 + sg * ow / 2).attr('x2', c0 + sg * ow / 2).attr('y1', y - 3).attr('y2', y + bh + 3).style('stroke', 'var(--bx-gold)').style('stroke-width', 2).style('stroke-dasharray', '3 2'));
+    const inside = wd > 86;
+    svg.append('text').attr('x', inside ? c0 : c0 + wd / 2 + 8).attr('y', y + bh / 2 + 5).attr('text-anchor', inside ? 'middle' : 'start').style('font-family', 'var(--font-anthropic-serif)').style('font-size', '16px').style('font-weight', 600).style('fill', inside ? 'var(--color-bg)' : 'var(--color-fg)').text(fmt(V(d)));
+    const dv = V(d) - V(old[i]), conv = i ? (V(cur[i - 1]) ? V(d) / V(cur[i - 1]) : 0) : 1;
+    const dtxt = `较 ${md(DAYS[b])} ${dv > 0 ? '+' : dv < 0 ? '−' : '±'}${fnMetric === 'n' ? nf(Math.abs(dv)) + ' 家' : w(Math.abs(dv)) + ' 万'}`;
+    if (narrow) {
+      svg.append('text').attr('x', 2).attr('y', y - 4).style('font-size', '11px').style('fill', 'var(--color-fg)').text(d.l);
+      svg.append('text').attr('x', W - 2).attr('y', y - 4).attr('text-anchor', 'end').style('font-size', '11px').style('fill', i === worst ? 'var(--bx-refuse)' : 'var(--color-fg-muted)').text(i ? `转化 ${d3.format('.0%')(conv)} · ${dtxt}` : dtxt);
+    } else {
+      svg.append('text').attr('x', lw - 12).attr('y', y + bh / 2 + 5).attr('text-anchor', 'end').style('font-size', '13px').style('fill', 'var(--color-fg)').text(d.l);
+      const tx = lw + cw + 16;
+      svg.append('text').attr('x', tx).attr('y', y + 13).style('font-size', '12px').style('fill', i === worst ? 'var(--bx-refuse)' : 'var(--color-fg)').style('font-weight', i === worst ? 600 : 400).text(i ? `上一步转化 ${d3.format('.1%')(conv)}${i === worst ? ' · 流失最大' : ''}` : `9月 GMV ${w(d.g)} 万 · 增量 ${d3.format(',.1f')(d.u)} 万`);
+      svg.append('text').attr('x', tx).attr('y', y + 30).style('font-size', '11px').style('fill', dv ? (dv > 0 ? 'var(--color-ok)' : 'var(--color-bad)') : 'var(--color-fg-muted)').text(dtxt + (i ? ` · 占名单 ${d3.format('.0%')(V(d) / mx)}` : ''));
+    }
+    tip(card, bar.node(), [{t: d.l}, {t: `${nf(d.n)} 家 · ${w(d.g)} 万/月 · 增量 ${d3.format(',.1f')(d.u)} 万`}, {t: `${md(DAYS[b])}：${nf(old[i].n)} 家 · ${w(old[i].g)} 万`}]);
+  });
+  q('fn-title').textContent = `攻坚漏斗 · ${md(DAYS[sel])}`;
+  q('fn-note').textContent = `范围：${md(DAYS[0])} 时仍未签约的 ${nf(O2.length)} 家商家（之后签约的也计入最后一步）；更早已签的 ${nf(early)} 家不在漏斗内。阶段与卡点筛选不作用于漏斗；金色虚线标出对比日的规模，红字为流失最大的一步。`;
+}
+
+function kpiDeltas(L, Vf) {
+  const b = Math.max(0, ND - 1 - cmp), e = ND - 1, lab = cmp === 1 ? '较昨日' : '较 7 天前';
+  const at = (i, ks) => L.filter(r => ks.includes(HIST.get(r.id)[i]));
+  const set = (id, d, fmtd, goodUp) => { const x = q(id); x.className = 'bx-kd' + (d ? ((d > 0) === goodUp ? ' up' : ' down') : ''); x.textContent = `${lab} ${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmtd(Math.abs(d))}`; };
+  const newSigned = (window.__bxS || []).filter(s => passSigned(s) && s.sign_date > DAYS[b] && s.sign_date <= DAYS[e]);
+  set('k-n-d', -newSigned.length, nf, false);
+  { const x = q('k-u-d'); const dd = -d3.sum(newSigned, s => 0); x.className = 'bx-kd'; const tp = L.filter(r => r.stage !== 'exit').sort((u, v) => v.uplift - u.uplift)[0]; x.textContent = tp ? `最大单家 ${tp.name.split('-').pop()} +${d3.format(',.1f')(tp.uplift)} 万` : '—'; }
+  set('k-g-d', -d3.sum(newSigned, s => s.gmv_sep), v => w(v) + ' 万', false);
+  [['k-a-d', ['agree']], ['k-c-d', ['consider']], ['k-r-d', ['refuse', 'new', 'exit']]].forEach(([id, ks], j) => set(id, at(e, ks).length - at(b, ks).length, nf, j < 2));
+  const vb = Vf.filter(v => v.date > DAYS[b] && v.date <= DAYS[e]).length; const x = q('k-v-d'); x.className = 'bx-kd'; x.textContent = `${cmp === 1 ? '昨日' : '近 7 天'}拜访 ${nf(vb)} 次`;
+}
+
+dash.onData(() => {
+  fill(); ring();
+  const mdd = dash.data('merchants'), vd = dash.data('visits'), sd = dash.data('signed');
+  const boxes = ['c-stage', 'c-block', 'c-market', 'c-visit', 'profile', 'c-trend', 'c-funnel', 'c-dcards'].map(q);
+  const st = [mdd.status, vd.status, sd.status];
+  boxes.forEach(b => b.classList.toggle('dash-skeleton', st.includes('loading')));
+  if (st.some(s => s !== 'ok')) {
+    if (st.some(s => s === 'error' || s === 'missing')) boxes.forEach(b => { b.replaceChildren(el('div', 'bx-fail', 'Failed to load')); });
+    return;
+  }
+  const asof = (dash.data('summary').data[0] || {}).as_of || d3.max(vd.data, v => v.date);
+  if (window.__bxR !== mdd.data || window.__bxV !== vd.data || window.__bxS !== sd.data) { buildHist(mdd.data, sd.data, vd.data, asof); }
+  mdd.data.forEach(r => { r.warn = warnsOf(r, asof); });
+  window.__bxR = mdd.data; window.__bxV = vd.data; window.__bxS = sd.data; window.__bxAsof = asof; build(mdd.data); draw();
+});
+
+function draw() {
+  const R = window.__bxR, V = window.__bxV, S = window.__bxS; if (!R || !V || !S) return;
+  syncChips();
+  const L = R.filter(r => pass(r)), ids = new Set(L.map(r => r.id));
+  window.__bxL = L;
+  const asof = window.__bxAsof;
+  const e = day(asof).getTime(), dd = v => (e - day(v.date).getTime()) / 864e5;
+  const Vf = V.filter(v => ids.has(v.id)), V30 = Vf.filter(v => dd(v) < 30), V60 = Vf.filter(v => dd(v) >= 30 && dd(v) < 60);
+  const Vown = V.filter(v => dd(v) < 30);
+  const on = [F.zone, F.warns.size, F.stages.size, F.blocks.size, F.owner, F.region, F.market, F.attr, F.q].filter(Boolean).length;
+  q('f-toggle').textContent = on ? `筛选条件 · ${on}` : '筛选条件';
+  const sum = q('f-sum'); sum.replaceChildren('筛选结果 ', el('b', '', nf(L.length) + ' 家'), ' · ', el('b', '', w(sumG(L)) + ' 万'), on ? ` · ${on} 项筛选` : '');
+  takeaway(L, R); kpis(L, R, V30, V60, asof); kpiDeltas(L, Vf);
+  // 每日 & 漏斗：未签（忽略阶段筛选）＋ 已签
+  const O = R.filter(r => pass(r, 'stage')).concat(S.filter(passSigned)), oid = new Set(O.map(r => r.id)), Vo = V.filter(v => oid.has(v.id));
+  const b = Math.max(0, sel - cmp), EV = events(O, b, sel);
+  q('cmp-seg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.c === cmp));
+  q('dim-seg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.d === dim));
+  q('fn-seg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === fnMetric));
+  trendChart(O, Vo); dailyCards(O, Vo, EV, b); dimTable(O, Vo, EV, b); changeLog(EV, Vo, b); funnel(O, b); midBand(R, S, V); pace(R, S); asks(R);
+  charts(L, R, Vown); visitChart(Vf, asof); table(L); profile(R, V, L); feed(Vf); zoneBoard(R, S, V, asof); warnBoard(R);
+}
+
+// 风险预警板：当前筛选（不含预警筛选本身）下每类预警的家数与 GMV，点卡片按该预警筛选全页
+function warnBoard(R) {
+  const box = q('warn-cards'); if (!box) return;
+  const base = R.filter(r => pass(r, 'warn'));
+  box.replaceChildren(...WARN.map(([k, lab]) => {
+    const hit = base.filter(r => r.warn.includes(k));
+    const b = el('button', 'bx-wc'); b.type = 'button'; b.setAttribute('aria-pressed', F.warns.has(k));
+    b.append(el('span', 'l', lab), el('span', 'v', nf(hit.length)), el('span', 's', `9月 GMV ${w(sumG(hit))} 万`));
+    b.addEventListener('click', () => { F.warns.has(k) ? F.warns.delete(k) : F.warns.add(k); showAll = false; draw(); });
+    return b;
+  }));
+  const n = base.filter(r => r.warn.length).length;
+  q('warn-note').textContent = `当前范围 ${nf(n)} 家至少触发一项预警（共 ${nf(base.length)} 家）；点卡片只看该类商家，可多选。`;
+}
+
+// 战区对比：同一分层范围下各战区的签约进度与跟进力度，点行切换战区
+function zoneBoard(R, S, V, asof) {
+  const tb = q('zone-t'); if (!tb) return;
+  const e = day(asof).getTime(), d30 = s => s && (e - day(s).getTime()) / 864e5 < 30;
+  const rows = ZONES.map(z => {
+    const U = R.filter(r => zoneOf(r) === z && F.tiers.has(r.tier)), Sg = S.filter(s => zoneOf(s) === z && F.tiers.has(s.tier));
+    const live = U.filter(r => r.stage !== 'pending' && r.stage !== 'exit'), ids = new Set(U.map(r => r.id));
+    const done = Sg.length + U.filter(r => r.stage === 'pending').length;
+    return {z, n: live.length, rate: pct(done, done + live.length), agree: U.filter(r => r.stage === 'agree').length,
+      consider: U.filter(r => r.stage === 'consider').length, up: d3.sum(live, r => r.uplift), gmv: d3.sum(live, r => r.gmv_sep),
+      v30: V.filter(v => ids.has(v.id) && d30(v.date)).length, s30: Sg.filter(s => d30(s.sign_date)).length};
+  });
+  const maxUp = d3.max(rows, r => r.up) || 1;
+  tb.replaceChildren(...rows.map(r => {
+    const tr = el('tr', F.zone === r.z ? 'on' : ''); tr.tabIndex = 0;
+    const bar = el('span', 'bx-zbar'); bar.style.setProperty('--w', (r.up / maxUp * 100).toFixed(1) + '%');
+    const up = el('td'); up.append(w1(r.up), bar);
+    const rate = el('td'); const rb = el('span', 'bx-zrate'); rb.style.setProperty('--w', r.rate + '%'); rate.append(r.rate + '%', rb);
+    tr.append(el('td', 'bx-nm', r.z), el('td', '', nf(r.n)), rate, el('td', '', nf(r.agree)), el('td', '', nf(r.consider)), up, el('td', '', w(r.gmv)), el('td', '', nf(r.v30)), el('td', '', nf(r.s30)));
+    const go = () => { F.zone = F.zone === r.z ? '' : r.z; F.owner = ''; F.market = ''; saveHash(); draw(); };
+    tr.addEventListener('click', go); tr.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
+    return tr;
+  }));
+}
+
+
+function pace(R, S) {
+  const base = r => zoneOk(r) && (!F.owner || r.owner === F.owner) && (!F.region || r.region === F.region) && (!F.market || r.market === F.market) && (!F.q || (r.name + ' ' + r.id).toLowerCase().includes(F.q));
+  const asof = window.__bxAsof, t0 = day(asof).getTime(), tD = day(DEADLINE).getTime(), wk = Math.max(0.1, (tD - t0) / (7 * 864e5));
+  const grp = ts => { const U = R.filter(r => ts.includes(r.tier) && base(r)), Sg = S.filter(s => ts.includes(s.tier) && base(s)), O = U.concat(Sg);
+    const rem = i => O.filter(r => { const s = HIST.get(r.id)[i]; return s !== 'signed' && s !== 'exit'; }).length;
+    const b28 = Math.max(0, ND - 29), s28 = Sg.filter(s => s.sign_date && s.sign_date > DAYS[b28] && s.sign_date <= DAYS[ND - 1]).length;
+    const left = rem(ND - 1), pend = U.filter(r => r.stage === 'pending').length, perW = s28 / 4, need = left / wk;
+    const eta = perW > 0 ? new Date(t0 + left / perW * 7 * 864e5) : null;
+    return {O, left, pend, perW, need, eta, s28, hist: DAYS.map((D, i) => rem(i)), up: d3.sum(U.filter(r => r.stage !== 'exit'), r => r.uplift)}; };
+  const G = [['Top300', TIERS.slice(0, 3)], ['Top301–500', [TIERS[3]]], ['Top501–800', [TIERS[4]]], ['Top800 合计', TIERS.slice(0, 5)]].map(([l, ts]) => ({l, ...grp(ts)}));
+  const all = G[3], fmtD = d => !d ? '无法完成' : (d.getTime() - tD > 365 * 864e5 ? '1 年以上' : `${d.getUTCFullYear() !== 2026 ? d.getUTCFullYear() + '/' : ''}${d.getUTCMonth() + 1}/${d.getUTCDate()}`);
+  const status = g => { if (!g.left) return ['ok', '已完成']; if (!g.eta) return ['bad', '严重落后']; const late = (g.eta.getTime() - tD) / 864e5; return late <= 0 ? ['ok', '按期'] : late <= 21 ? ['warn', '落后'] : ['bad', '严重落后']; };
+  // 提示条
+  const al = q('pace-alert'); al.replaceChildren();
+  const B = t => el('b', '', t), st = status(all);
+  al.append(el('span', 'bx-chip2 ' + st[0], st[1]));
+  const tx = el('div'); tx.append('距 12/15 还有 ', B(d3.format('.1f')(wk) + ' 周'), '，Top800 还剩 ', B(nf(all.left) + ' 家'), ' 未签（其中 ' + nf(all.pend) + ' 家拜访已登记签约、待系统确认），需要 ', B('每周签 ' + d3.format('.1f')(all.need) + ' 家'), '；近 4 周实际每周 ', B(d3.format('.1f')(all.perW) + ' 家'), '，按这个速度 ', B(all.eta ? (fmtD(all.eta) === '1 年以上' ? '一年以上才能清零' : '要到 ' + fmtD(all.eta) + ' 才能清零') : '无法在可见时间内清零'), '。差距约 ' + (all.perW ? d3.format('.0f')(all.need / all.perW) + ' 倍' : '无穷大') + '，靠逐家上门无法完成，需要政策和人力上的支持（见下方决策事项）。');
+  al.appendChild(tx);
+  // 表
+  const tb = q('c-pace-t'); tb.replaceChildren();
+  const hd = el('tr'); ['分档', '剩余未签', '待系统确认', '每周需签', '近4周实际/周', '预计清零', '状态'].forEach(s => hd.appendChild(el('th', '', s))); const th = el('thead'); th.appendChild(hd); tb.appendChild(th);
+  const bd = el('tbody'); G.forEach((g, i) => { const tr = el('tr'), s = status(g), c = el('td'); c.appendChild(el('span', 'bx-chip2 ' + s[0], s[1]));
+    tr.append(el('td', '', g.l), el('td', '', nf(g.left)), el('td', '', nf(g.pend)), el('td', '', d3.format('.1f')(g.need)), el('td', '', d3.format('.1f')(g.perW)), el('td', '', fmtD(g.eta)), c);
+    if (i === 3) tr.querySelectorAll('td').forEach(td => td.style.fontWeight = '600'); bd.appendChild(tr); }); tb.appendChild(bd);
+  q('pace-note').textContent = `剩余未签不含已退出；“近 4 周实际”按签约日期统计（${md(DAYS[Math.max(0, ND - 29)])} 之后至 ${md(asof)}），只有拜访登记或合同里有日期的签约才计入`;
+  // 图
+  const box = q('c-pace'), card = q('pace-card'); box.replaceChildren();
+  const W = Math.max(320, box.clientWidth), H = 260, m = {t: 18, r: 70, b: 28, l: 38};
+  const xs = d3.scaleUtc([day(DAYS[0]), day(DEADLINE)], [m.l, W - m.r]);
+  const ymax = Math.max(4, d3.max(all.hist));
+  const y = d3.scaleLinear([0, ymax * 1.08], [H - m.b, m.t]).nice();
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%');
+  y.ticks(4).forEach(t => { svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(t)).attr('y2', y(t)).style('stroke', 'var(--cds-chart-grid)'); svg.append('text').attr('x', m.l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text(t); });
+  const ticks = [day(DAYS[0]), day(asof), day('2026-11-15'), day(DEADLINE)];
+  ticks.forEach((d, i) => svg.append('text').attr('x', xs(d)).attr('y', H - 8).attr('text-anchor', i === 3 ? 'end' : i === 0 ? 'start' : 'middle').style('font-size', '10px').style('fill', 'var(--color-fg-muted)').text(i === 1 ? `今天 ${md(asof)}` : i === 3 ? '截止 12/15' : md(iso(d))));
+  svg.append('line').attr('x1', xs(day(asof))).attr('x2', xs(day(asof))).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--cds-chart-reference)').style('stroke-dasharray', '3 3');
+  svg.append('line').attr('x1', xs(day(DEADLINE))).attr('x2', xs(day(DEADLINE))).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--bx-gold)').style('opacity', .5);
+  const pts = DAYS.map((D, i) => ({d: day(D), v: all.hist[i]}));
+  const grad = svg.append('defs').append('linearGradient').attr('id', 'bxpg').attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
+  [[0, .22], [.5, .08], [1, 0]].forEach(([o, a]) => grad.append('stop').attr('offset', o).style('stop-color', 'var(--bx-primary)').style('stop-opacity', a));
+  svg.append('path').attr('d', d3.area(p => xs(p.d), y(0), p => y(p.v))(pts)).style('fill', 'url(#bxpg)');
+  svg.append('path').attr('d', d3.line(p => xs(p.d), p => y(p.v))(pts)).style('fill', 'none').style('stroke', 'var(--bx-primary)').style('stroke-width', 2.2).style('stroke-linejoin', 'round');
+  svg.append('line').attr('x1', xs(day(asof))).attr('y1', y(all.left)).attr('x2', xs(day(DEADLINE))).attr('y2', y(0)).style('stroke', 'var(--bx-gold)').style('stroke-width', 2).style('stroke-dasharray', '6 4');
+  const projEnd = Math.max(0, all.left - all.perW * wk);
+  svg.append('line').attr('x1', xs(day(asof))).attr('y1', y(all.left)).attr('x2', xs(day(DEADLINE))).attr('y2', y(projEnd)).style('stroke', 'var(--bx-refuse)').style('stroke-width', 2).style('stroke-dasharray', '2 4').style('stroke-linecap', 'round');
+  svg.append('circle').attr('cx', xs(day(asof))).attr('cy', y(all.left)).attr('r', 4).style('fill', 'var(--bx-primary)');
+  const lab = [{y: y(0), t: '计划 0', c: 'var(--bx-gold)'}, {y: y(projEnd), t: `推演 ${nf(Math.round(projEnd))}`, c: 'var(--bx-refuse)'}].sort((a, b) => a.y - b.y);
+  if (lab[1].y - lab[0].y < 13) lab[0].y = lab[1].y - 13;
+  lab.forEach(l => svg.append('text').attr('x', W - m.r + 6).attr('y', l.y + 4).style('font-size', '10px').style('fill', l.c).text(l.t));
+  svg.append('text').attr('x', xs(day(asof)) + 6).attr('y', y(all.left) - 8).style('font-size', '11px').style('fill', 'var(--color-fg)').text(`剩 ${nf(all.left)} 家`);
+  pts.forEach(p => { const c = svg.append('circle').attr('cx', xs(p.d)).attr('cy', y(p.v)).attr('r', 6).style('fill', 'transparent'); tip(card, c.node(), [{t: md(iso(p.d))}, {t: `剩余未签 ${nf(p.v)} 家`}]); });
+}
+
+function asks(R) {
+  const U = R.filter(r => F.tiers.has(r.tier) && pass(r, 'stage') && !['exit', 'pending'].includes(r.stage) && r.tier !== 'top800+' || (F.tiers.size === 1 && F.tiers.has('top800+') && pass(r, 'stage') && !['exit', 'pending'].includes(r.stage)));
+  const G = [
+    {k: '税务', q: '决策一 · 平台方案', t: '税务合规统一方案', need: '商家卡在一般纳税人、开票、执照承接等税务成本上。需要平台层面出统一方案（开票主体、税务口径或补贴），商务逐家谈解决不了。', f: r => r.blockers.split('、').includes('税务'), c: 'var(--bx-refuse)', filt: '税务'},
+    {k: '机制', q: '决策二 · 授权', t: '授权负向机制倒逼', need: '这批商家明确表示“要强压才签”或对平台机制有意见。需要授权流量、弹窗、治理等负向手段的使用范围和时间点。', f: r => r.blockers.split('、').includes('平台机制') || r.supply_view === '需要施压可以签约', c: 'var(--bx-consider)', filt: '平台机制'},
+    {k: '僵局', q: '决策三 · 资源', t: '高层陪访破僵局', need: '已拜访 3 次以上仍在考虑或拒绝，或卡在老板本人不出面。建议由更高层级出面对主理人，并决定是否换人跟进。', f: r => (r.visits >= 3 && ['consider', 'refuse'].includes(r.stage)) || (r.blockers.split('、').includes('老板决策') && r.top300), c: 'var(--bx-primary)'},
+    {k: '退出', q: '决策四 · 取舍', t: '退出风险商家的取舍', need: '商家表态“谈抽佣就退出”。比例不可让，需要老板定原则：强推接受流失，还是先保 GMV、放到最后一批。下面两个数字就是这道选择题的两端。', f: r => r.blockers.split('、').includes('退出风险') || r.supply_view === '谈抽佣就退出', c: 'var(--bx-exit)', filt: '退出风险'}];
+  q('c-asks').replaceChildren(...G.map(g => { const a = U.filter(g.f).sort((x, y) => y.uplift - x.uplift), c = el('div', 'bx-ask'); c.style.setProperty('--k', g.c);
+    c.append(el('span', 'q', g.q), el('span', 't', g.t), el('span', 'need', g.need));
+    const nums = el('div', 'nums'); [[nf(a.length) + ' 家', '涉及商家'], [d3.format(',.1f')(d3.sum(a, r => r.uplift)) + ' 万', '佣金增量/月'], [w(sumG(a)) + ' 万', g.k === '退出' ? '流失风险 GMV/月' : '9月 GMV']].forEach(([v, l]) => { const d = el('div'); d.append(el('b', '', v), el('span', '', l)); nums.appendChild(d); }); c.appendChild(nums);
+    const ol = el('ol'); a.slice(0, 4).forEach(r => { const li = el('li'); li.append(r.brand, el('span', '', ` · ${r.tier} · +${d3.format(',.1f')(r.uplift)} 万`)); ol.appendChild(li); }); if (a.length) c.appendChild(ol);
+    if (g.filt) { const b = el('button', 'bx-btn', `查看这 ${nf(a.length)} 家`); b.type = 'button'; b.addEventListener('click', () => { F.blocks = new Set([g.filt]); showAll = false; draw(); q('list').scrollIntoView({behavior: 'smooth', block: 'start'}); }); c.appendChild(b); }
+    else { const b = el('button', 'bx-btn', '按拜访次数查看明细'); b.type = 'button'; b.addEventListener('click', () => { sortK = 'visits'; sortD = -1; F.stages = new Set(['consider', 'refuse']); draw(); q('list').scrollIntoView({behavior: 'smooth', block: 'start'}); }); c.appendChild(b); }
+    return c; }));
+}
+function midBand(R, S, V) {
+  const base = r => zoneOk(r) && (!F.owner || r.owner === F.owner) && (!F.region || r.region === F.region) && (!F.market || r.market === F.market) && (!F.q || (r.name + ' ' + r.id).toLowerCase().includes(F.q));
+  const asof = window.__bxAsof, e = day(asof).getTime(), ago = s => s ? Math.round((e - day(s).getTime()) / 864e5) : null;
+  const band = ts => { const U = R.filter(r => ts.includes(r.tier) && base(r)), Sg = S.filter(s => ts.includes(s.tier) && base(s)), ids = new Set(U.map(r => r.id).concat(Sg.map(s => s.id)));
+    const uid = new Set(U.map(r => r.id)), V30 = V.filter(v => uid.has(v.id) && (e - day(v.date).getTime()) / 864e5 < 30);
+    const ev = events(U.concat(Sg), Math.max(0, ND - 8), ND - 1);
+    return {U, Sg, tot: U.length + Sg.length, rate: (U.length + Sg.length) ? Sg.length / (U.length + Sg.length) : 0, g: sumG(U), agree: U.filter(r => r.stage === 'agree'),
+      touched: U.filter(r => !['pool', 'new'].includes(r.stage)).length, v30: V30.length, cov30: new Set(V30.map(v => v.id)).size,
+      stale: U.filter(r => r.stage !== 'exit' && (!r.last_visit || ago(r.last_visit) > 30)).length, up7: ev.filter(x => x.fwd).length, sign7: ev.filter(x => x.type === 'sign').length}; };
+  const T = band(TIERS.slice(0, 3)), A = band([TIERS[3]]), Bb = band([TIERS[4]]);
+  const tk = q('mid-take'), B = t => el('b', '', t); tk.replaceChildren();
+  tk.append('签约率 Top300 ', B(d3.format('.1%')(T.rate)), '，301–500 ', B(d3.format('.1%')(A.rate)), '，501–800 ', B(d3.format('.1%')(Bb.rate)), '。两档腰部合计未签 ', B(nf(A.U.length + Bb.U.length) + ' 家 · ' + w(A.g + Bb.g) + ' 万/月'), '，其中 ', B(nf(A.stale + Bb.stale) + ' 家'), ' 超过 30 天没有跟进。');
+  const col = (t, x, color, pk) => {
+    const c = el('div', 'bx-col'); c.style.setProperty('--k', color); c.id = 'mid-' + pk;
+    const hd = el('div', 'bx-col-h'), ht = el('div'); ht.append(el('div', 'bx-eyebrow', t === TIERS[3] ? '腰部上段' : '腰部下段'), el('h3', 'bx-col-t', t), el('p', 'bx-note', `共 ${nf(x.tot)} 家 · 已签 ${nf(x.Sg.length)} 家 · 未签 ${nf(x.U.length)} 家`));
+    const go = el('button', 'bx-btn', '全页只看该档'); go.type = 'button'; go.addEventListener('click', () => { F.tiers = new Set([t]); showAll = false; draw(); q('filters').scrollIntoView({behavior: 'smooth', block: 'start'}); });
+    hd.append(ht, go); c.appendChild(hd);
+    const k = el('div', 'bx-kpis');
+    [['签约率', d3.format('.1%')(x.rate), `落后 Top300 ${d3.format('.1f')((T.rate - x.rate) * 100)} 个点`, 'var(--bx-gold)'], ['未签 GMV', w(x.g) + ' 万', `${nf(x.U.length)} 家未签`, 'var(--bx-ink)'], ['已同意 · 待收口', nf(x.agree.length) + ' 家', `${w(sumG(x.agree))} 万/月`, 'var(--bx-agree)'],
+     ['超 30 天未跟进', nf(x.stale) + ' 家', `占未签 ${pct(x.stale, x.U.length)}%`, 'var(--bx-refuse)'], ['近 30 天拜访', nf(x.v30) + ' 次', `覆盖 ${nf(x.cov30)} 家`, 'var(--bx-primary)'], ['近 7 天推进', nf(x.up7) + ' 家', `其中新签 ${nf(x.sign7)} 家`, 'var(--bx-consider)']]
+      .forEach(([l, v, s, cc]) => { const d = el('div', 'bx-kpi'); d.style.setProperty('--k', cc); d.append(el('span', 'bx-kl', l), el('span', 'bx-kv', v), el('span', 'bx-ks', s)); k.appendChild(d); });
+    c.appendChild(k);
+    const sw = el('div'), bar = el('div', 'bx-st'), leg = el('div', 'bx-stl'); sw.appendChild(el('div', 'bx-kl', '未签商家阶段构成'));
+    ST.forEach(([s, l]) => { const a = x.U.filter(r => r.stage === s); if (!a.length) return; const i = el('i'); i.style.width = a.length / x.U.length * 100 + '%'; i.style.background = SC[s]; bar.appendChild(i); tip(c, i, [{t: `${t} · ${l}`}, {t: `${a.length} 家 · ${w(sumG(a))} 万`}]); const sp = el('span'); sp.append(dot(SC[s]), `${l} ${a.length}`); leg.appendChild(sp); });
+    sw.append(bar, leg); c.appendChild(sw);
+    const tw = el('div', 'bx-scroll'); tw.style.overflowX = 'auto'; const tb = el('table', 'bx-own bx-pl'), th = el('thead'), hr = el('tr');
+    ['优先攻坚（佣金增量前 10）', '阶段', '增量（万/月）', '负责', '未跟进'].forEach(s => hr.appendChild(el('th', '', s))); th.appendChild(hr); tb.appendChild(th);
+    const bd = el('tbody');
+    x.U.filter(r => r.stage !== 'exit').sort((a, b) => b.uplift - a.uplift).slice(0, 10).forEach(r => { const tr = el('tr'), nm = el('td'); nm.appendChild(el('div', 'bx-nm', r.brand)); nm.appendChild(el('span', 'bx-br', `${r.market} · GMV ${w1(r.gmv_sep)} 万${r.blockers ? ' · ' + r.blockers : ''}`));
+      const st = el('td'); st.appendChild(pill(r.stage)); const a = ago(r.last_visit);
+      tr.append(nm, st, el('td', '', d3.format(',.2f')(r.uplift)), el('td', '', r.owner), el('td', a == null || a > 30 ? 'bx-stale' : '', a == null ? '从未拜访' : a + ' 天'));
+      tr.tabIndex = 0; const g2 = () => { F.tiers.add(r.tier); selId = r.id; draw(); q('profile').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+      tr.addEventListener('click', g2); tr.addEventListener('keydown', ev => { if (ev.key === 'Enter') g2(); }); bd.appendChild(tr); });
+    tb.appendChild(bd); tw.appendChild(tb); c.appendChild(tw);
+    return c;
+  };
+  q('mid-cols').replaceChildren(col(TIERS[3], A, 'var(--bx-primary)', 't500'), col(TIERS[4], Bb, 'var(--bx-gold)', 't800'));
+  const rows = [['商家总数', x => nf(x.tot)], ['已签约', x => nf(x.Sg.length)], ['签约率', x => d3.format('.1%')(x.rate), x => x.rate], ['未签家数', x => nf(x.U.length)], ['未签 9月 GMV', x => w(x.g) + ' 万'], ['已同意待收口', x => nf(x.agree.length) + ' 家'],
+    ['未签中已触达', x => pct(x.touched, x.U.length) + '%', x => x.touched / (x.U.length || 1)], ['近 30 天拜访覆盖', x => pct(x.cov30, x.U.length) + '%', x => x.cov30 / (x.U.length || 1)], ['超 30 天未跟进', x => pct(x.stale, x.U.length) + '%', x => -x.stale / (x.U.length || 1)], ['近 7 天阶段推进', x => nf(x.up7) + ' 家']];
+  const tb = q('mid-cmp'); tb.replaceChildren();
+  const hd = el('tr'); ['指标', 'Top300', 'Top301–500', 'Top501–800'].forEach(s => hd.appendChild(el('th', '', s))); const th = el('thead'); th.appendChild(hd); tb.appendChild(th);
+  const bd = el('tbody'); rows.forEach(([l, f, cf]) => { const tr = el('tr'); tr.append(el('td', '', l), el('td', '', f(T)));
+    [A, Bb].forEach(x => { const td = el('td', 'hl', f(x)); if (cf) { const d = cf(x) - cf(T); if (Math.abs(d) > 0.005) td.appendChild(el('span', 'gap ' + (d > 0 ? 'bx-up' : 'bx-down'), d > 0 ? '优于' : '落后')); } tr.appendChild(td); });
+    bd.appendChild(tr); }); tb.appendChild(bd);
+}
+q('cmp-seg').querySelectorAll('button').forEach(x => x.addEventListener('click', () => { cmp = +x.dataset.c; draw(); }));
+q('dim-seg').querySelectorAll('button').forEach(x => x.addEventListener('click', () => { dim = x.dataset.d; draw(); }));
+q('fn-seg').querySelectorAll('button').forEach(x => x.addEventListener('click', () => { fnMetric = x.dataset.m; draw(); }));
+})();
+</script>
+<script>
+// 先出页面骨架，数据单独压缩加载，加载完再执行主脚本
+(() => {
+  document.documentElement.classList.add('bx-loading');
+  const run = d => {
+    // 防御：表格里漏填日期的拜访不进图表，避免一条脏数据拖垮整页
+    const ok = s => /^\d{4}-\d\d-\d\d$/.test(s || '');
+    d.visits = (d.visits || []).filter(v => ok(v.date));
+    window.__BXD = d;
+    document.querySelectorAll('script[type="text/bx-main"]').forEach(s => {
+      const n = document.createElement('script'); n.textContent = s.textContent; s.replaceWith(n);
+    });
+    document.documentElement.classList.remove('bx-loading');
+    const s = (d.summary || [])[0] || {}, snap = document.getElementById('bx-snap');
+    if (snap && s.built_at) snap.textContent = `数据来源：飞书知识库「商务部签约进度表」· 自动更新 · 最近更新 ${s.built_at} · 拜访记录截至 ${s.as_of}`;
+    // 数据超过 90 分钟没更新（正常每 15–30 分钟一次）：说明定时任务或读表出了问题，顶部明确提示，避免拿旧数据做决策
+    const age = (Date.now() - new Date(String(s.built_at).replace(' ', 'T') + ':00+08:00')) / 6e4;
+    if (age > 90) {
+      const b = document.createElement('div'); b.className = 'bx-alert'; b.style.margin = '0 0 12px';
+      b.textContent = `⚠ 数据已 ${age > 120 ? Math.round(age / 60) + ' 小时' : Math.round(age) + ' 分钟'}未更新（最近更新 ${s.built_at}），可能机器人未运行，请以飞书表格为准。`;
+      document.querySelector('.bx')?.prepend(b);
+    }
+    const top = document.createElement('button'); top.className = 'bx-top'; top.type = 'button'; top.textContent = '↑'; top.setAttribute('aria-label', '回到顶部');
+    top.addEventListener('click', () => scrollTo({top: 0, behavior: 'smooth'}));
+    addEventListener('scroll', () => top.classList.toggle('show', scrollY > 900), {passive: true});
+    document.body.appendChild(top);
+    document.dispatchEvent(new Event('bx-ready'));
+  };
+  window.__bxDataP.then(run)
+    .catch(e => { const t = document.getElementById('takeaway'); if (t) t.textContent = '数据加载失败，请刷新重试（' + e.message + '）'; });
+})();
+</script>
+<script src="anim.js"></script>
+</body></html>
