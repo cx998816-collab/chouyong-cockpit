@@ -8,7 +8,7 @@ from pathlib import Path
 import requests
 
 API = "https://open.feishu.cn/open-apis"
-CONFIG_KEYS = ("FEISHU_APP_ID", "FEISHU_APP_SECRET", "WIKI_TOKEN", "SHEET_ID", "DASHBOARD_URL", "LOCAL_XLSX")
+CONFIG_KEYS = ("FEISHU_APP_ID", "FEISHU_APP_SECRET", "WIKI_TOKEN", "SHEET_ID", "DASHBOARD_URL", "LOCAL_XLSX", "PUBLIC_URL")
 
 
 def load_config(path=Path(__file__).with_name("config.env")):

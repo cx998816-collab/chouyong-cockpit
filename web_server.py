@@ -11,7 +11,9 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
+import urllib.request
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -87,29 +89,79 @@ def _find_cloudflared():
 
 
 def _run_tunnel(exe):
-    proc = subprocess.Popen([exe, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{PORT}"],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                            errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    atexit.register(proc.terminate)  # 机器人退出时一并关掉隧道
-    for line in proc.stdout:
-        m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", line)
-        if m and not _state["url"]:
-            _state["url"] = m.group(0)
-            lark.logger.info(f"驾驶舱公开网址：{_state['url']}")
-    _state["url"] = None
-    lark.logger.error("cloudflared 隧道已退出，驾驶舱公开网址失效")
+    """一直保持隧道：进程退出或被看门狗判定失效后，等一会儿重新开一条（网址会变，卡片按钮自动跟着变）。"""
+    while True:
+        proc = subprocess.Popen([exe, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{PORT}"],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                                errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        _state["proc"] = proc
+        atexit.register(proc.terminate)  # 机器人退出时一并关掉隧道
+        for line in proc.stdout:
+            m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", line)
+            if m and not _state["url"]:
+                # 新网址要过一会儿才在公网生效；太早发给用户，飞书浏览器会缓存「找不到」。确认能打开后再启用
+                threading.Thread(target=_publish_when_ready, args=(m.group(0),), daemon=True).start()
+        _state["url"] = None
+        lark.logger.error("cloudflared 隧道已退出，30 秒后重建")
+        time.sleep(30)
 
 
-def start():
+def _publish_when_ready(url):
+    for _ in range(24):  # 最多等 2 分钟
+        try:
+            if urllib.request.urlopen(f"{url}/health.json", timeout=10).status == 200:
+                break
+        except Exception:
+            time.sleep(5)
+    _state["url"] = url
+    lark.logger.info(f"驾驶舱公开网址：{url}")
+
+
+def _watch_tunnel():
+    """看门狗：断网恢复后快速隧道的网址常常已失效但进程还在。每 5 分钟检查一次公开网址，
+    连续 3 次打不开（且本机能上网）就关掉旧隧道，由 _run_tunnel 重建。"""
+    fails = 0
+    while True:
+        time.sleep(300)
+        url = _state["url"]
+        if not url:
+            continue
+        try:
+            ok = urllib.request.urlopen(f"{url}/health.json", timeout=20).status == 200
+        except Exception:
+            ok = False
+        if ok:
+            fails = 0
+            continue
+        try:  # 本机本身断网时不算隧道的问题，等网络恢复
+            socket.getaddrinfo("open.feishu.cn", 443)
+        except OSError:
+            continue
+        fails += 1
+        lark.logger.warning(f"驾驶舱公开网址打不开（第 {fails} 次）：{url}")
+        if fails >= 3 and _state.get("proc"):
+            lark.logger.error("隧道已失效，正在重建")
+            fails = 0
+            _state["proc"].terminate()
+
+
+def start(public=None):
+    """public 为服务器的固定网址（如 http://1.2.3.4）时直接对外提供网页，不再开隧道。"""
     for p in [*WEB_DIR.glob("*.html"), *WEB_DIR.glob("*.js")]:  # 静态文件先压缩好，避免首个请求现压
         _write_gz(p)
-    server =ThreadingHTTPServer(("127.0.0.1", PORT), functools.partial(_Handler, directory=str(WEB_DIR)))
+    host, port = ("0.0.0.0", int(os.environ.get("WEB_PORT", 80))) if public else ("127.0.0.1", PORT)
+    server = ThreadingHTTPServer((host, port), functools.partial(_Handler, directory=str(WEB_DIR)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    if public:
+        _state["url"] = public.rstrip("/")
+        lark.logger.info(f"驾驶舱网址：{_state['url']}")
+        return
     exe = _find_cloudflared()
     if not exe:
         lark.logger.error("找不到 cloudflared，驾驶舱只能在本机打开")
         return
     threading.Thread(target=_run_tunnel, args=(exe,), daemon=True).start()
+    threading.Thread(target=_watch_tunnel, daemon=True).start()
 
 
 def public_url():

@@ -1,0 +1,17 @@
+[Unit]
+Description=抽佣驾驶舱机器人（飞书长连接 + 驾驶舱网页）
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=cockpit
+WorkingDirectory=/opt/cockpit
+ExecStart=/opt/cockpit/.venv/bin/python -u bot.py
+Restart=always
+RestartSec=10
+Environment=TZ=Asia/Shanghai
+# 允许普通用户监听 80 端口
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
